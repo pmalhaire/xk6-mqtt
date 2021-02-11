@@ -1,4 +1,4 @@
-package kafka
+package mqtt
 
 import "github.com/loadimpact/k6/stats"
 

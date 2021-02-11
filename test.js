@@ -1,7 +1,7 @@
 /*
 
 This is a k6 test script that imports the xk6-kafka and
-tests Kafka with a 100 messages per connection.
+tests Mqtt with a 100 messages per connection.
 
 */
 
@@ -40,7 +40,7 @@ const value_schema = JSON.stringify({
 export default function () {
     const producer = writer(
         ["localhost:9092"], // bootstrap servers
-        "test-k6-plugin-topic", // Kafka topic
+        "test-k6-plugin-topic", // Mqtt topic
     )
 
     for (let index = 0; index < 100; index++) {
@@ -51,7 +51,7 @@ export default function () {
                     "name": "k6-plugin-kafka",
                     "version": "0.0.1",
                     "author": "Mostafa Moradian",
-                    "description": "k6 Plugin to Load Test Apache Kafka"
+                    "description": "k6 Plugin to Load Test Apache Mqtt"
                 })
             }], "", value_schema);
 
@@ -67,7 +67,7 @@ export default function () {
     //         value: "Mostafa Moradian"
     //     }, {
     //         key: "module-purpose",
-    //         value: "Kafka load testing"
+    //         value: "Mqtt load testing"
     //     }]);
 
     // check(error, {
@@ -77,7 +77,7 @@ export default function () {
 
     const consumer = reader(
         ["localhost:9092"], // bootstrap servers
-        "test-k6-plugin-topic", // Kafka topic
+        "test-k6-plugin-topic", // Mqtt topic
     )
 
     // Read 10 messages only

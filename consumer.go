@@ -1,169 +1,65 @@
-package kafka
+package mqtt
 
 import (
 	"context"
-	"errors"
-	"io"
-	"time"
+	"fmt"
 
+	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/loadimpact/k6/js/modules"
 	"github.com/loadimpact/k6/lib"
-	"github.com/loadimpact/k6/stats"
-	kafkago "github.com/segmentio/kafka-go"
 )
 
 func init() {
-	modules.Register("k6/x/kafka", new(Kafka))
+	modules.Register("k6/x/mqtt", new(Mqtt))
 }
 
-type Kafka struct{}
+type Mqtt struct {
+}
 
-func (*Kafka) Reader(
-	brokers []string, topic string, partition int,
-	minBytes int, maxBytes int, offset int64) *kafkago.Reader {
+func (*Mqtt) Reader() paho.Client {
+	// The full URL of the MQTT server to connect to"
+	server := "127.0.0.1:1883"
+	// A username to authenticate to the MQTT server
+	user := "username"
+	// Password to match username
+	password := "password"
 
-	if maxBytes == 0 {
-		maxBytes = 10e6 // 10MB
-	}
+	// clean session setting
+	cleansess := false
 
-	reader := kafkago.NewReader(kafkago.ReaderConfig{
-		Brokers:          brokers,
-		Topic:            topic,
-		Partition:        partition,
-		MinBytes:         minBytes,
-		MaxBytes:         maxBytes,
-		MaxWait:          time.Millisecond * 200,
-		RebalanceTimeout: time.Second * 5,
-		QueueCapacity:    1,
+	// Client id for reader
+	clientid := "1"
+
+	// Topic to publish and receive the messages on
+	topic := "topic"
+	// The QoS to send the messages at
+	qos := 1
+
+	opts := paho.NewClientOptions()
+	opts.AddBroker(server)
+	opts.SetClientID(clientid)
+	opts.SetUsername(user)
+	opts.SetPassword(password)
+	opts.SetCleanSession(cleansess)
+	opts.SetDefaultPublishHandler(func(client paho.Client, msg paho.Message) {
+		fmt.Println("msg")
 	})
-
-	if offset > 0 {
-		reader.SetOffset(offset)
+	client := paho.NewClient(opts)
+	if token := client.Connect(); token.Wait() && token.Error() != nil {
+		panic(token.Error())
 	}
-
-	return reader
+	if token := client.Subscribe(topic, byte(qos), nil); token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+	return client
 }
 
-func (*Kafka) Consume(
-	ctx context.Context, reader *kafkago.Reader, limit int64,
-	keySchema string, valueSchema string) []map[string]interface{} {
+func (*Mqtt) Consume(
+	ctx context.Context, reader *paho.Client) {
 	state := lib.GetState(ctx)
 
 	if state == nil {
 		ReportError(nil, "Cannot determine state")
-		ReportReaderStats(ctx, reader.Stats())
-		return nil
+		return
 	}
-
-	if limit <= 0 {
-		limit = 1
-	}
-
-	messages := make([]map[string]interface{}, 0)
-
-	for i := int64(0); i < limit; i++ {
-		msg, err := reader.ReadMessage(ctx)
-
-		if err == io.EOF {
-			ReportError(err, "Reached the end of queue")
-			// context is cancelled, so break
-			ReportReaderStats(ctx, reader.Stats())
-			return messages
-		}
-
-		if err != nil {
-			ReportError(err, "There was an error fetching messages")
-			ReportReaderStats(ctx, reader.Stats())
-			return messages
-		}
-
-		message := make(map[string]interface{})
-		if len(msg.Key) > 0 {
-			message["key"] = string(msg.Key)
-			if keySchema != "" {
-				message["key"] = FromAvro(msg.Key, keySchema)
-			}
-		}
-
-		if len(msg.Value) > 0 {
-			message["value"] = string(msg.Value)
-			if valueSchema != "" {
-				message["value"] = FromAvro(msg.Value, valueSchema)
-			}
-		}
-
-		messages = append(messages, message)
-	}
-
-	ReportReaderStats(ctx, reader.Stats())
-
-	return messages
-}
-
-func ReportReaderStats(ctx context.Context, currentStats kafkago.ReaderStats) error {
-	state := lib.GetState(ctx)
-	err := errors.New("State is nil")
-
-	if state == nil {
-		ReportError(err, "Cannot determine state")
-		return err
-	}
-
-	tags := make(map[string]string)
-	tags["clientid"] = currentStats.ClientID
-	tags["topic"] = currentStats.Topic
-	tags["partition"] = currentStats.Partition
-
-	now := time.Now()
-
-	stats.PushIfNotDone(ctx, state.Samples, stats.Sample{
-		Time:   now,
-		Metric: ReaderDials,
-		Tags:   stats.IntoSampleTags(&tags),
-		Value:  float64(currentStats.Dials),
-	})
-
-	stats.PushIfNotDone(ctx, state.Samples, stats.Sample{
-		Time:   now,
-		Metric: ReaderFetches,
-		Tags:   stats.IntoSampleTags(&tags),
-		Value:  float64(currentStats.Fetches),
-	})
-
-	stats.PushIfNotDone(ctx, state.Samples, stats.Sample{
-		Time:   now,
-		Metric: ReaderMessages,
-		Tags:   stats.IntoSampleTags(&tags),
-		Value:  float64(currentStats.Messages),
-	})
-
-	stats.PushIfNotDone(ctx, state.Samples, stats.Sample{
-		Time:   now,
-		Metric: ReaderBytes,
-		Tags:   stats.IntoSampleTags(&tags),
-		Value:  float64(currentStats.Bytes),
-	})
-
-	stats.PushIfNotDone(ctx, state.Samples, stats.Sample{
-		Time:   now,
-		Metric: ReaderRebalances,
-		Tags:   stats.IntoSampleTags(&tags),
-		Value:  float64(currentStats.Rebalances),
-	})
-
-	stats.PushIfNotDone(ctx, state.Samples, stats.Sample{
-		Time:   now,
-		Metric: ReaderTimeouts,
-		Tags:   stats.IntoSampleTags(&tags),
-		Value:  float64(currentStats.Timeouts),
-	})
-
-	stats.PushIfNotDone(ctx, state.Samples, stats.Sample{
-		Time:   now,
-		Metric: ReaderErrors,
-		Tags:   stats.IntoSampleTags(&tags),
-		Value:  float64(currentStats.Errors),
-	})
-
-	return nil
 }
