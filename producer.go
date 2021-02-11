@@ -2,57 +2,79 @@ package mqtt
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/loadimpact/k6/lib"
 )
 
-func (*Mqtt) Writer(brokers []string, topic string) paho.Client {
-	// The full URL of the MQTT server to connect to"
-	server := "127.0.0.1:1883"
+func (*Mqtt) Writer(
+	// The list of URL of  MQTT server to connect to
+	servers []string,
 	// A username to authenticate to the MQTT server
-	user := "username"
+	user,
 	// Password to match username
-	password := "password"
+	password string,
 
 	// clean session setting
-	cleansess := false
+	cleansess bool,
 
 	// Client id for reader
-	clientid := "1"
+	clientid string,
+
+	// timeout sec
+	timeout int,
+
+) paho.Client {
 
 	opts := paho.NewClientOptions()
-	opts.AddBroker(server)
+	for i := range servers {
+		opts.AddBroker(servers[i])
+	}
 	opts.SetClientID(clientid)
 	opts.SetUsername(user)
 	opts.SetPassword(password)
 	opts.SetCleanSession(cleansess)
-	opts.SetDefaultPublishHandler(func(client paho.Client, msg paho.Message) {
-		fmt.Println("msg")
-	})
 	client := paho.NewClient(opts)
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		panic(token.Error())
+	token := client.Connect()
+	if !token.WaitTimeout(time.Duration(timeout) * time.Second) {
+		ReportError(token.Error(), "Connect timeout")
+		return nil
+	}
+	if token.Error() != nil {
+		ReportError(token.Error(), "Connect failed")
+		return nil
 	}
 	return client
 }
 
 func (*Mqtt) Produce(
-	ctx context.Context, writer paho.Client, topic string, qos int, messages []string) error {
-	state := lib.GetState(ctx)
-	err := errors.New("State is nil")
-
-	if state == nil {
-		ReportError(err, "Cannot determine state")
-		return err
+	ctx context.Context,
+	writer paho.Client,
+	topic string,
+	qos int,
+	message string,
+	timeout int,
+) error {
+	if writer == nil {
+		ReportError(ErrorNilWriter, "Writer is not ready")
+		return ErrorNilWriter
 	}
+	state := lib.GetState(ctx)
+	if state == nil {
+		ReportError(ErrorNilState, "Cannot determine state")
+		return ErrorNilState
+	}
+	defer func() { go writer.Disconnect(0) }()
 
-	for _, message := range messages {
-		token := writer.Publish(topic, byte(qos), false, message)
-		token.Wait()
-		panic(token.Error())
+	token := writer.Publish(topic, byte(qos), false, message)
+	if !token.WaitTimeout(time.Duration(timeout) * time.Second) {
+		ReportError(token.Error(), "Produce timeout")
+		return ErrorWriterTimeout
+	}
+	if err := token.Error(); err != nil {
+		ReportError(err, "Produce failed")
+		return err
 	}
 
 	return nil
