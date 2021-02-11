@@ -54,6 +54,7 @@ func (*Mqtt) Produce(
 	topic string,
 	qos int,
 	message string,
+	retain bool,
 	timeout int,
 ) error {
 	if writer == nil {
@@ -65,9 +66,10 @@ func (*Mqtt) Produce(
 		ReportError(ErrorNilState, "Cannot determine state")
 		return ErrorNilState
 	}
+	// force close async
 	defer func() { go writer.Disconnect(0) }()
 
-	token := writer.Publish(topic, byte(qos), false, message)
+	token := writer.Publish(topic, byte(qos), retain, message)
 	if !token.WaitTimeout(time.Duration(timeout) * time.Second) {
 		ReportError(token.Error(), "Produce timeout")
 		return ErrorWriterTimeout

@@ -57,13 +57,49 @@ func (*Mqtt) Reader(
 	return client
 }
 
-func (*Mqtt) Consume(
-	ctx context.Context, reader paho.Client,
+func (*Mqtt) Subscribe(
+	ctx context.Context,
+	reader paho.Client,
 	// Topic to consume messages from
 	topic string,
 	// The QoS of messages
 	qos,
 	// timeout in sec
+	timeout int,
+) (chan paho.Message, error) {
+	state := lib.GetState(ctx)
+
+	if state == nil {
+		ReportError(ErrorNilState, "Subscribe Cannot determine state")
+		return nil, ErrorNilState
+	}
+	recieved := make(chan paho.Message, 1)
+	messageCB := func(client paho.Client, msg paho.Message) {
+		go func(msg paho.Message) {
+			recieved <- msg
+		}(msg)
+	}
+	if reader == nil {
+		ReportError(ErrorNilReader, "Subscribe Reader is not ready")
+		return nil, ErrorNilReader
+	}
+	token := reader.Subscribe(topic, byte(qos), messageCB)
+	if !token.WaitTimeout(time.Duration(timeout) * time.Second) {
+		ReportError(ErrorReaderTimeout, "Subscribe timeout")
+		return nil, ErrorReaderTimeout
+	}
+	err := token.Error()
+	if err != nil {
+		ReportError(err, "Subscribe failed")
+		return nil, err
+	}
+	return recieved, nil
+}
+
+func (*Mqtt) Consume(
+	ctx context.Context,
+	reader paho.Client,
+	recieved chan paho.Message,
 	timeout int,
 ) (string, error) {
 	state := lib.GetState(ctx)
@@ -72,31 +108,15 @@ func (*Mqtt) Consume(
 		ReportError(ErrorNilState, "Cannot determine state")
 		return "", ErrorNilState
 	}
-	recieved := make(chan paho.Message)
-	messageCB := func(client paho.Client, msg paho.Message) {
-		go func(msg paho.Message) { recieved <- msg }(msg)
-	}
-	if reader == nil {
-		ReportError(ErrorNilReader, "Reader is not ready")
-		return "", ErrorNilReader
-	}
-	token := reader.Subscribe(topic, byte(qos), messageCB)
-	if !token.WaitTimeout(time.Duration(timeout) * time.Second) {
-		ReportError(token.Error(), "Consume timeout")
-		return "", ErrorReaderTimeout
-	}
-	err := token.Error()
-	if err != nil {
-		ReportError(err, "Subscribe failed")
-		return "", err
-	}
 
-	// force disconnect after read
+	// force close async
 	defer func() { go reader.Disconnect(0) }()
+
 	select {
 	case msg := <-recieved:
 		return string(msg.Payload()), nil
 	case <-time.After(time.Second * time.Duration(timeout)):
-		return "", ErrorReaderTimeout
+		ReportError(ErrorMessageRecieveTimeout, "Message never recieved")
+		return "", ErrorMessageRecieveTimeout
 	}
 }
