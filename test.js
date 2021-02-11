@@ -59,7 +59,9 @@ export default function () {
 
     // subscribe first
     let err_subscribe, recieved = subscribe(
+        // consume object
         consumer,
+        // topic to be used
         k6Topic,
         // The QoS of messages
         1,
@@ -71,11 +73,17 @@ export default function () {
     });
     // produce message
     let err_produce = produce(
+        // producer object
         producer,
+        // topic to be used
         k6Topic,
+        // The QoS of messages
         1,
+        // Message to be sent
         k6Message,
+        // retain policy on message
         true,
+        // timeout in sec
         10
     );
 
@@ -84,7 +92,6 @@ export default function () {
     });
     if (err_produce != undefined) {
         console.log(`produce err ${__ITER}`, id);
-        //fail("recive error", err_recieve);
     }
     // Read messages
     let err_recieve, message = consume(
@@ -100,7 +107,6 @@ export default function () {
     });
     if (err_recieve != undefined) {
         console.log(`recive err ${__ITER}`, id);
-        //fail("recive error", err_recieve);
     }
 
     check(message, {

@@ -49,27 +49,12 @@ docker run -p 1883:1883 -e "DOCKER_VERNEMQ_ACCEPT_EULA=yes" -e DOCKER_VERNEMQ_AL
 
 ### k6 Test
 
-The following k6 test script is used to test this extension and with an Mqtt server runing. The script is available as `test.js` with more code and commented sections. The script has 4 parts:
-
-1. The __imports__ at the top shows the exposed functions that are imported from k6 and the extension, `check` from k6 and the `writer`, `produce`, `reader`, `consume` from the extension using the `k6/x/kafka` extension loading convention.
-
-2. The __Avro message producer__:
-    1. The `writer` function is used to open a connection to the bootstrap servers. The first argument is an array of strings that signifies the bootstrap server addresses and the second is the topic you want to write to. You can reuse this writer object to produce as many messages as you want.
-    2. The `produce` function is used to send a list of messages to Mqtt. The first argument is the `producer` object, the second is the list of messages (with key and value), the third and  the fourth are the key schema and value schema in Avro format. If the schema are not passed to the function, the values are treated as normal strings, as in the key schema, where an empty string, `""`, is passed.
-    The produce function returns an `error` if it fails. The check is optional, but `error` being `undefined` means that `produce` function successfully sent the message.
-    1. The `producer.close()` function closes the `producer` object.
-3. The __Avro message consumer__:
-    1. The `reader` function is used to open a connection to the bootstrap servers. The first argument is an array of strings that signifies the bootstrap server addresses and the second is the topic you want to reader from.
-    2. The `consume` function is used to read a list of messages from Mqtt. The first argument is the `consumer` object, the second is the number of messages to read in one go, the third and  the fourth are the key schema and value schema in Avro format. If the schema are not passed to the function, the values are treated as normal strings, as in the key schema, where an empty string, `""`, is passed.
-    The consume function returns an empty array if it fails. The check is optional, but it checks to see if the length of the message array is exactly 10.
-    1. The `consumer.close()` function closes the `consumer` object.
-
 see [test file](test.js)
 
 You can run k6 with the Mqtt extension using the following command:
 
 ```bash
-$ ./k6 run --vus 50 --duration 60s test.js
+$ ./k6 run --vus 10 --duration 10s test.js
 ```
 
 And here's the test result output:
