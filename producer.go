@@ -40,7 +40,7 @@ func (*Mqtt) Writer(brokers []string, topic string) paho.Client {
 }
 
 func (*Mqtt) Produce(
-	ctx context.Context, writer paho.Client, topic string, qos int, messages []map[string]string) error {
+	ctx context.Context, writer paho.Client, topic string, qos int, messages []string) error {
 	state := lib.GetState(ctx)
 	err := errors.New("State is nil")
 

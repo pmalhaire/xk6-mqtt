@@ -27,7 +27,7 @@ Then, install [xk6](https://github.com/k6io/xk6) and build your custom k6 binary
 
 2. Build the binary:
   ```shell
-  $ xk6 build v0.29.0 --with github.com/mostafa/xk6-kafka
+  $ xk6 build v0.29.0 --with github.com/pmalhaire/xk6-mqtt
   ```
 
 ## Run & Test

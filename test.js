@@ -1,6 +1,6 @@
 /*
 
-This is a k6 test script that imports the xk6-kafka and
+This is a k6 test script that imports the xk6-mqtt and
 tests Mqtt with a 100 messages per connection.
 
 */
@@ -13,29 +13,8 @@ import {
     produce,
     reader,
     consume
-} from 'k6/x/kafka'; // import kafka plugin
+} from 'k6/x/mqtt'; // import mqtt plugin
 
-const value_schema = JSON.stringify({
-    "type": "record",
-    "name": "ModuleValue",
-    "fields": [{
-            "name": "name",
-            "type": "string"
-        },
-        {
-            "name": "version",
-            "type": "string"
-        },
-        {
-            "name": "author",
-            "type": "string"
-        },
-        {
-            "name": "description",
-            "type": "string"
-        }
-    ]
-});
 
 export default function () {
     const producer = writer(
@@ -44,35 +23,15 @@ export default function () {
     )
 
     for (let index = 0; index < 100; index++) {
-        let error = produce(producer,
-            [{
-                key: "DA KEY!",
-                value: JSON.stringify({
-                    "name": "k6-plugin-kafka",
-                    "version": "0.0.1",
-                    "author": "Mostafa Moradian",
-                    "description": "k6 Plugin to Load Test Apache Mqtt"
-                })
-            }], "", value_schema);
+        let error = produce(producer, "topic", 1,
+            ["msg 1",
+                "msg 2"]);
 
         check(error, {
             "is sent": err => err == undefined
         });
     }
 
-    // If you don't want to use Avro, don't pass key and value schema
-    // error = produce(producer,
-    //     [{
-    //         key: "module-author",
-    //         value: "Mostafa Moradian"
-    //     }, {
-    //         key: "module-purpose",
-    //         value: "Mqtt load testing"
-    //     }]);
-
-    // check(error, {
-    //     "is sent": err => err == undefined
-    // });
     producer.close();
 
     const consumer = reader(
@@ -81,13 +40,13 @@ export default function () {
     )
 
     // Read 10 messages only
-    let messages = consume(consumer, 10, "", value_schema);
+    let messages = consume(consumer);
     // let messages = consume(consumer, 1);
 
     // console.log(JSON.stringify(messages));
-    check(messages, {
-        "10 messages returned": msgs => msgs.length == 10
-    })
+    // check(messages, {
+    //     "10 messages returned": msgs => msgs.length == 10
+    // })
 
     consumer.close();
 }
