@@ -1,4 +1,4 @@
-# xk6-kafka
+# xk6-mqtt
 
 This is a [k6](https://github.com/loadimpact/k6) extension using the [xk6](https://github.com/k6io/xk6) system.
 
