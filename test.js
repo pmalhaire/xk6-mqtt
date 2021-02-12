@@ -22,45 +22,63 @@ import {
     publish,
 } from 'k6/x/mqtt'; // import mqtt plugin
 
-let seed = Math.random() * 1000;
+// create random number to create a new topic at each run
+let rnd = Math.random() * 1000;
+
+let vus_connections = {}
+
 
 export default function () {
     // Mqtt topic one per VU
-    const k6Topic = `test-k6-plugin-topic ${seed} ${__VU}`;
+    const k6Topic = `test-k6-plugin-topic ${rnd} ${__VU}`;
     // Message content one per ITER and per VU
-    const k6Message = `k6-message-content-${seed} ${__VU}:${__ITER}`;
-    const k6SubId = `k6-sub"  ${__VU}`;
-    const k6PubId = `k6-pub ${__VU}`;
+    const k6Message = `k6-message-content-${rnd} ${__VU}:${__ITER}`;
+    const k6SubId = `k6-sub-${__VU}`;
+    const k6PubId = `k6-pub-${__VU}`;
 
-    const pub_client = connect(
-        // The list of URL of  MQTT server to connect to
-        ["localhost:1883"],
-        // A username to authenticate to the MQTT server
-        "",
-        // Password to match username
-        "",
-        // clean session setting
-        false,
-        // Client id for reader
-        k6PubId,
-        // timeout in ms
-        1000,
-    )
+    let pub_client;
+    // use one connection per vu
+    if (k6PubId in vus_connections) {
+        pub_client = vus_connections[k6PubId];
+    } else {
+        pub_client = connect(
+            // The list of URL of  MQTT server to connect to
+            ["localhost:1883"],
+            // A username to authenticate to the MQTT server
+            "",
+            // Password to match username
+            "",
+            // clean session setting
+            false,
+            // Client id for reader
+            k6PubId,
+            // timeout in ms
+            1000,
+        )
+        vus_connections[k6PubId] = pub_client;
+    }
 
-    const sub_client = connect(
-        // The list of URL of  MQTT server to connect to
-        ["localhost:1883"],
-        // A username to authenticate to the MQTT server
-        "",
-        // Password to match username
-        "",
-        // clean session setting
-        false,
-        // Client id for reader
-        k6SubId,
-        // timeout in ms
-        1000,
-    )
+    let sub_client;
+    // use one connection per vu
+    if (k6SubId in vus_connections) {
+        sub_client = vus_connections[k6SubId];
+    } else {
+        sub_client = connect(
+            // The list of URL of  MQTT server to connect to
+            ["localhost:1883"],
+            // A username to authenticate to the MQTT server
+            "",
+            // Password to match username
+            "",
+            // clean session setting
+            false,
+            // Client id for reader
+            k6SubId,
+            // timeout in ms
+            1000,
+        )
+        vus_connections[k6SubId] = sub_client;
+    }
 
     // subscribe first
     let err_subscribe, consume_token = subscribe(
@@ -117,6 +135,11 @@ export default function () {
     if (message != k6Message) {
         console.log(`received ${message} expected ${k6Message}`);
     }
-    close(pub_client, 1000)
-    close(sub_client, 1000)
+
+}
+
+export function teardown() {
+    for (client in vus_connections) {
+        close(client, 1000);
+    }
 }
