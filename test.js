@@ -8,24 +8,31 @@ tests Mqtt with a 100 messages per connection.
 import {
     check, fail
 } from 'k6';
+import { TLS_1_0 } from 'k6/http';
 import {
-    writer,
-    produce,
-    reader,
+    // connect to mqtt
+    connect,
+    // close connection
+    close,
+    // subscribe to topic
+    subscribe,
+    // consume one message
     consume,
-    subscribe
+    // publish one message
+    publish,
 } from 'k6/x/mqtt'; // import mqtt plugin
 
 let seed = Math.random() * 1000;
-let id = seed;
 
 export default function () {
-    const k6Topic = "test-k6-plugin-topic" + id; // Mqtt topic
-    const k6Message = "k6-message-content" + id; // Message content
-    const k6SubId = "k6-sub" + id++
-    const k6PubId = "k6-pub" + id++
-    //console.log(`writer ${__ITER}`, id);
-    const producer = writer(
+    // Mqtt topic one per VU
+    const k6Topic = `test-k6-plugin-topic ${seed} ${__VU}`;
+    // Message content one per ITER and per VU
+    const k6Message = `k6-message-content-${seed} ${__VU}:${__ITER}`;
+    const k6SubId = `k6-sub"  ${__VU}`;
+    const k6PubId = `k6-pub ${__VU}`;
+
+    const pub_client = connect(
         // The list of URL of  MQTT server to connect to
         ["localhost:1883"],
         // A username to authenticate to the MQTT server
@@ -36,13 +43,11 @@ export default function () {
         false,
         // Client id for reader
         k6PubId,
-        // retain or not the message if no consumer subscribed
-        true,
-        // timeout in sec
-        10,
+        // timeout in ms
+        1000,
     )
 
-    const consumer = reader(
+    const sub_client = connect(
         // The list of URL of  MQTT server to connect to
         ["localhost:1883"],
         // A username to authenticate to the MQTT server
@@ -53,28 +58,28 @@ export default function () {
         false,
         // Client id for reader
         k6SubId,
-        // timeout in sec
-        10,
+        // timeout in ms
+        1000,
     )
 
     // subscribe first
-    let err_subscribe, recieved = subscribe(
+    let err_subscribe, consume_token = subscribe(
         // consume object
-        consumer,
+        sub_client,
         // topic to be used
         k6Topic,
         // The QoS of messages
         1,
-        // timeout in sec
-        10,
+        // timeout in ms
+        1000,
     )
     check(err_subscribe, {
         "is subscribed": err => err == undefined
     });
-    // produce message
-    let err_produce = produce(
+    // publish message
+    let err_publish = publish(
         // producer object
-        producer,
+        pub_client,
         // topic to be used
         k6Topic,
         // The QoS of messages
@@ -82,34 +87,36 @@ export default function () {
         // Message to be sent
         k6Message,
         // retain policy on message
-        true,
-        // timeout in sec
-        10
+        false,
+        // timeout in ms
+        1000,
     );
 
-    check(err_produce, {
+    check(err_publish, {
         "is sent": err => err == undefined
     });
-    if (err_produce != undefined) {
-        console.log(`produce err ${__ITER}`, id);
-    }
-    // Read messages
-    let err_recieve, message = consume(
-        consumer,
+
+    // Read one message
+    let err_consume, message = consume(
         // token to recieve message
-        recieved,
-        // timeout in sec
-        10,
+        consume_token,
+        // timeout in ms
+        1000,
     );
 
-    check(err_recieve, {
+    check(err_consume, {
         "is recieved": err => err == undefined
     });
-    if (err_recieve != undefined) {
-        console.log(`recive err ${__ITER}`, id);
+    if (err_consume != undefined) {
+        console.log(`recive err ${__ITER} `, id);
     }
 
     check(message, {
-        "message returned": msg => msg == k6Message
+        "is content correct": msg => msg == k6Message
     });
+    if (message != k6Message) {
+        console.log(`received ${message} expected ${k6Message}`);
+    }
+    close(pub_client, 1000)
+    close(sub_client, 1000)
 }
