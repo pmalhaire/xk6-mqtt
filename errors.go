@@ -2,22 +2,13 @@ package mqtt
 
 import (
 	"errors"
-	"fmt"
 )
 
 var (
-	ErrorNilState              = errors.New("State is nil")
-	ErrorNilWriter             = errors.New("Writer is nil")
-	ErrorNilReader             = errors.New("Reader is nil")
-	ErrorWriterTimeout         = errors.New("Writer timeout")
-	ErrorReaderTimeout         = errors.New("Reader timeout")
-	ErrorMessageRecieveTimeout = errors.New("Reader message recieve timeout")
+	ErrorState        = errors.New("invalid state")
+	ErrorClient       = errors.New("invalid client given")
+	ErrorTimeout      = errors.New("operation timeout")
+	ErrorSubscribe    = errors.New("subscribe failure")
+	ErrorConsumeToken = errors.New("invalid consume token")
+	ErrorPublish      = errors.New("publish failure")
 )
-
-func ReportError(err error, msg string) {
-	if err != nil {
-		fmt.Println(msg, ":", err)
-	} else {
-		fmt.Println(msg)
-	}
-}

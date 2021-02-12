@@ -5,6 +5,7 @@ import (
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
+	"github.com/loadimpact/k6/js/common"
 	"github.com/loadimpact/k6/lib"
 )
 
@@ -14,6 +15,7 @@ type Mqtt struct {
 
 // Connect create a connection to mqtt
 func (*Mqtt) Connect(
+	ctx context.Context,
 	// The list of URL of  MQTT server to connect to
 	servers []string,
 	// A username to authenticate to the MQTT server
@@ -28,7 +30,11 @@ func (*Mqtt) Connect(
 	timeout uint,
 
 ) paho.Client {
-
+	state := lib.GetState(ctx)
+	if state == nil {
+		common.Throw(common.GetRuntime(ctx), ErrorState)
+		return nil
+	}
 	opts := paho.NewClientOptions()
 	for i := range servers {
 		opts.AddBroker(servers[i])
@@ -39,12 +45,13 @@ func (*Mqtt) Connect(
 	opts.SetCleanSession(cleansess)
 	client := paho.NewClient(opts)
 	token := client.Connect()
+
 	if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
-		ReportError(token.Error(), "Connect timeout")
+		common.Throw(common.GetRuntime(ctx), ErrorTimeout)
 		return nil
 	}
 	if token.Error() != nil {
-		ReportError(token.Error(), "Connect failed")
+		common.Throw(common.GetRuntime(ctx), ErrorClient)
 		return nil
 	}
 	return client
@@ -57,12 +64,12 @@ func (*Mqtt) Close(
 	client paho.Client,
 	// timeout ms
 	timeout uint,
-) error {
+) {
 	state := lib.GetState(ctx)
 	if state == nil {
-		ReportError(ErrorNilState, "Subscribe Cannot determine state")
-		return ErrorNilState
+		common.Throw(common.GetRuntime(ctx), ErrorState)
+		return
 	}
 	client.Disconnect(timeout)
-	return nil
+	return
 }

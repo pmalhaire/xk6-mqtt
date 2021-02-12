@@ -5,6 +5,7 @@ import (
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
+	"github.com/loadimpact/k6/js/common"
 	"github.com/loadimpact/k6/lib"
 )
 
@@ -17,25 +18,26 @@ func (*Mqtt) Publish(
 	message string,
 	retain bool,
 	timeout int,
-) error {
-	if client == nil {
-		ReportError(ErrorNilWriter, "Writer is not ready")
-		return ErrorNilWriter
-	}
+) {
 	state := lib.GetState(ctx)
 	if state == nil {
-		ReportError(ErrorNilState, "Cannot determine state")
-		return ErrorNilState
+		common.Throw(common.GetRuntime(ctx), ErrorState)
+		return
 	}
-	token := client.Publish(topic, byte(qos), retain, message)
-	if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
-		ReportError(token.Error(), "Produce timeout")
-		return ErrorWriterTimeout
-	}
-	if err := token.Error(); err != nil {
-		ReportError(err, "Produce failed")
-		return err
+	if client == nil {
+		common.Throw(common.GetRuntime(ctx), ErrorClient)
+		return
 	}
 
-	return nil
+	token := client.Publish(topic, byte(qos), retain, message)
+	if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
+		common.Throw(common.GetRuntime(ctx), ErrorTimeout)
+		return
+	}
+	if err := token.Error(); err != nil {
+		common.Throw(common.GetRuntime(ctx), ErrorPublish)
+		return
+	}
+
+	return
 }

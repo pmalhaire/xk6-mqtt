@@ -6,9 +6,9 @@ tests Mqtt with a 100 messages per connection.
 */
 
 import {
-    check, fail
+    check
 } from 'k6';
-import { TLS_1_0 } from 'k6/http';
+
 import {
     // connect to mqtt
     connect,
@@ -81,60 +81,69 @@ export default function () {
     }
 
     // subscribe first
-    let err_subscribe, consume_token = subscribe(
-        // consume object
-        sub_client,
-        // topic to be used
-        k6Topic,
-        // The QoS of messages
-        1,
-        // timeout in ms
-        1000,
-    )
+    let err_subscribe, consume_token;
+    try {
+        consume_token = subscribe(
+            // consume object
+            sub_client,
+            // topic to be used
+            k6Topic,
+            // The QoS of messages
+            1,
+            // timeout in ms
+            1000,
+        )
+    } catch (error) {
+        err_subscribe = error
+    }
     check(err_subscribe, {
         "is subscribed": err => err == undefined
     });
     // publish message
-    let err_publish = publish(
-        // producer object
-        pub_client,
-        // topic to be used
-        k6Topic,
-        // The QoS of messages
-        1,
-        // Message to be sent
-        k6Message,
-        // retain policy on message
-        false,
-        // timeout in ms
-        1000,
-    );
+    let err_publish;
+
+    try {
+        publish(
+            // producer object
+            pub_client,
+            // topic to be used
+            k6Topic,
+            // The QoS of messages
+            1,
+            // Message to be sent
+            k6Message,
+            // retain policy on message
+            false,
+            // timeout in ms
+            1000,
+        );
+    } catch (error) {
+        err_publish = error
+    }
 
     check(err_publish, {
         "is sent": err => err == undefined
     });
-
-    // Read one message
-    let err_consume, message = consume(
-        // token to recieve message
-        consume_token,
-        // timeout in ms
-        1000,
-    );
+    let err_consume, message
+    try {
+        // Read one message
+        message = consume(
+            // token to recieve message
+            consume_token,
+            // timeout in ms
+            1000,
+        );
+    } catch (error) {
+        err_consume = error
+    }
 
     check(err_consume, {
         "is recieved": err => err == undefined
     });
-    if (err_consume != undefined) {
-        console.log(`recive err ${__ITER} `, id);
-    }
 
     check(message, {
         "is content correct": msg => msg == k6Message
     });
-    if (message != k6Message) {
-        console.log(`received ${message} expected ${k6Message}`);
-    }
 
 }
 
