@@ -23,10 +23,13 @@ import {
 } from 'k6/x/mqtt'; // import mqtt plugin
 
 // create random number to create a new topic at each run
-let rnd = Math.random() * 1000;
+let rnd = Math.random() * timeout;
 
+// keep connection made by VU
 let vus_connections = {}
 
+// default timeout (ms)
+let timeout = 2000
 
 export default function () {
     // Mqtt topic one per VU
@@ -53,7 +56,7 @@ export default function () {
             // Client id for reader
             k6PubId,
             // timeout in ms
-            1000,
+            timeout,
         )
         vus_connections[k6PubId] = pub_client;
     }
@@ -75,7 +78,7 @@ export default function () {
             // Client id for reader
             k6SubId,
             // timeout in ms
-            1000,
+            timeout,
         )
         vus_connections[k6SubId] = sub_client;
     }
@@ -91,7 +94,7 @@ export default function () {
             // The QoS of messages
             1,
             // timeout in ms
-            1000,
+            timeout,
         )
     } catch (error) {
         err_subscribe = error
@@ -115,7 +118,7 @@ export default function () {
             // retain policy on message
             false,
             // timeout in ms
-            1000,
+            timeout,
         );
     } catch (error) {
         err_publish = error
@@ -131,7 +134,7 @@ export default function () {
             // token to recieve message
             consume_token,
             // timeout in ms
-            1000,
+            timeout,
         );
     } catch (error) {
         err_consume = error
@@ -149,6 +152,6 @@ export default function () {
 
 export function teardown() {
     for (client in vus_connections) {
-        close(client, 1000);
+        close(client, timeout);
     }
 }
