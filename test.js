@@ -40,13 +40,15 @@ export default function () {
     const k6PubId = `k6-pub-${__VU}`;
 
     let pub_client;
+    const host = "localhost";
+    const port = "1883";
     // use one connection per vu
     if (k6PubId in vus_connections) {
         pub_client = vus_connections[k6PubId];
     } else {
         pub_client = connect(
             // The list of URL of  MQTT server to connect to
-            ["localhost:1883"],
+            [host + ":" + port],
             // A username to authenticate to the MQTT server
             "",
             // Password to match username
@@ -68,7 +70,7 @@ export default function () {
     } else {
         sub_client = connect(
             // The list of URL of  MQTT server to connect to
-            ["localhost:1883"],
+            [host + ":" + port],
             // A username to authenticate to the MQTT server
             "",
             // Password to match username
