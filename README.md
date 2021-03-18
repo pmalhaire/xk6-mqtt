@@ -50,7 +50,7 @@ docker run -p 1883:1883 -e "DOCKER_VERNEMQ_ACCEPT_EULA=yes" -e DOCKER_VERNEMQ_AL
 The [test file](test.js) does the following.
 
 
-Creates per VU (concurent clients) :
+Creates per VU (concurrent clients) :
 - one topic
 - one subscribe connection (done at first iteration)
 - one publish connection (done at first iteration)
@@ -69,10 +69,10 @@ You can run the test using the following command:
 And here's the test result output:
 
 ```bash
-          /\      |‾‾| /‾‾/   /‾‾/
-     /\  /  \     |  |/  /   /  /
-    /  \/    \    |     (   /   ‾‾\
-   /          \   |  |\  \ |  (‾)  |
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
   / __________ \  |__| \__\ \_____/ .io
 
   execution: local
@@ -83,21 +83,25 @@ And here's the test result output:
            * default: 50 looping VUs for 1m0s (gracefulStop: 30s)
 
 
-running (1m00.0s), 00/50 VUs, 272092 complete and 0 interrupted iterations
+running (1m00.0s), 00/50 VUs, 570339 complete and 0 interrupted iterations
 default ✓ [======================================] 50 VUs  1m0s
 
+     ✓ is pub connected
+     ✓ is sub connected
      ✓ is subscribed
      ✓ is sent
-     ✓ is recieved
+     ✓ is received
      ✓ is content correct
 
      █ teardown
 
-     checks...............: 100.00% ✓ 1088368 ✗ 0
+     checks...............: 100.00% ✓ 3422034 ✗ 0   
      data_received........: 0 B     0 B/s
      data_sent............: 0 B     0 B/s
-     iteration_duration...: avg=11.01ms min=12.45µs med=9.74ms max=157.98ms p(90)=16.37ms p(95)=21.03ms
-     iterations...........: 272092  4534.367326/s
+     iteration_duration...: avg=5.25ms min=5.96µs med=4.49ms max=59.65ms p(90)=7.39ms p(95)=11.6ms
+     iterations...........: 570339  9504.706041/s
+     publish_time.........: avg=1.73ms min=0s     med=1ms    max=41ms    p(90)=3ms    p(95)=4ms   
+     subscribe_time.......: avg=2.86ms min=0s     med=2ms    max=43ms    p(90)=4ms    p(95)=6ms   
      vus..................: 50      min=50    max=50
      vus_max..............: 50      min=50    max=50
 

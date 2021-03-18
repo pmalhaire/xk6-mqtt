@@ -22,6 +22,7 @@ import {
     publish,
 } from 'k6/x/mqtt'; // import mqtt plugin
 
+import { Trend } from 'k6/metrics';
 
 const rnd_count = 2000;
 // create random number to create a new topic at each run
@@ -32,6 +33,10 @@ let vus_connections = {}
 
 // default timeout (ms)
 let timeout = 2000
+
+
+let publish_trend = new Trend('publish_time', true);
+let subscribe_trend = new Trend('subscribe_time', true);
 
 export default function () {
     // Mqtt topic one per VU
@@ -122,7 +127,7 @@ export default function () {
     });
     // publish message
     let err_publish;
-
+    let startTime = new Date().getTime();
     try {
         publish(
             // producer object
@@ -138,6 +143,7 @@ export default function () {
             // timeout in ms
             timeout,
         );
+        publish_trend.add(new Date().getTime() - startTime);
     } catch (error) {
         err_publish = error
     }
@@ -154,6 +160,7 @@ export default function () {
             // timeout in ms
             timeout,
         );
+        subscribe_trend.add(new Date().getTime() - startTime);
     } catch (error) {
         err_consume = error
     }
