@@ -22,8 +22,10 @@ import {
     publish,
 } from 'k6/x/mqtt'; // import mqtt plugin
 
+
+const rnd_count = 2000;
 // create random number to create a new topic at each run
-let rnd = Math.random() * timeout;
+let rnd = Math.random() * rnd_count;
 
 // keep connection made by VU
 let vus_connections = {}
@@ -39,35 +41,43 @@ export default function () {
     const k6SubId = `k6-sub-${__VU}`;
     const k6PubId = `k6-pub-${__VU}`;
 
-    let pub_client;
+    let err_pub_client, pub_client;
     const host = "localhost";
     const port = "1883";
     // use one connection per vu
     if (k6PubId in vus_connections) {
         pub_client = vus_connections[k6PubId];
     } else {
-        pub_client = connect(
-            // The list of URL of  MQTT server to connect to
-            [host + ":" + port],
-            // A username to authenticate to the MQTT server
-            "",
-            // Password to match username
-            "",
-            // clean session setting
-            false,
-            // Client id for reader
-            k6PubId,
-            // timeout in ms
-            timeout,
-        )
-        vus_connections[k6PubId] = pub_client;
+        try {
+            pub_client = connect(
+                // The list of URL of  MQTT server to connect to
+                [host + ":" + port],
+                // A username to authenticate to the MQTT server
+                "",
+                // Password to match username
+                "",
+                // clean session setting
+                false,
+                // Client id for reader
+                k6PubId,
+                // timeout in ms
+                timeout,
+            )
+            vus_connections[k6PubId] = pub_client;
+        } catch (error) {
+            err_pub_client = error;
+        }
     }
+    check(err_pub_client, {
+        "is pub connected": err => err == undefined
+    });
 
-    let sub_client;
+    let err_sub_client, sub_client;
     // use one connection per vu
     if (k6SubId in vus_connections) {
         sub_client = vus_connections[k6SubId];
     } else {
+        try {
         sub_client = connect(
             // The list of URL of  MQTT server to connect to
             [host + ":" + port],
@@ -83,7 +93,13 @@ export default function () {
             timeout,
         )
         vus_connections[k6SubId] = sub_client;
+        } catch (error) {
+            err_sub_client = error;
+        }
     }
+    check(err_sub_client, {
+        "is sub connected": err => err == undefined
+    });
 
     // subscribe first
     let err_subscribe, consume_token;
@@ -143,7 +159,7 @@ export default function () {
     }
 
     check(err_consume, {
-        "is recieved": err => err == undefined
+        "is received": err => err == undefined
     });
 
     check(message, {
