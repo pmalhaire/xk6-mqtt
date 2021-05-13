@@ -5,8 +5,8 @@ import (
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
-	"github.com/loadimpact/k6/js/common"
-	"github.com/loadimpact/k6/lib"
+	"go.k6.io/k6/js/common"
+	"go.k6.io/k6/lib"
 )
 
 // Publish allow to publish one message
