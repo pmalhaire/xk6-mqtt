@@ -1,6 +1,6 @@
 # xk6-mqtt
 
-This is a [k6](https://github.com/loadimpact/k6) extension using the [xk6](https://github.com/k6io/xk6) system.
+This is a [k6](https://go.k6.io/k6) extension using the [xk6](https://github.com/k6io/xk6) system.
 
 | :exclamation: This is a proof of concept, isn't supported by the k6 team, and may break in the future. USE AT YOUR OWN RISK! |
 | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -20,19 +20,19 @@ Then, install [xk6](https://github.com/k6io/xk6) and build your custom k6 binary
 
 1. Install `xk6`:
   ```shell
-  $ go get -u github.com/k6io/xk6/cmd/xk6
+  $ go install github.com/k6io/xk6/cmd/xk6@latest
   ```
 
 2. Build the binary: from latest version
   ```shell
-  $ xk6 build v0.31.1 --with github.com/pmalhaire/xk6-mqtt
+  $ xk6 build --with github.com/pmalhaire/xk6-mqtt@latest
   ```
 
 3. Build the binary: from source code
   ```shell
   git clone github.com/pmalhaire/xk6-mqtt
   cd xk6-mqtt
-  $ xk6 build v0.31.1 --with github.com/pmalhaire/xk6-mqtt=.
+  $ xk6 build --with github.com/pmalhaire/xk6-mqtt=.
   ```
 
 ## Run & Test

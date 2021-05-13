@@ -1,6 +1,6 @@
 package mqtt
 
-import "github.com/loadimpact/k6/stats"
+import "go.k6.io/k6/stats"
 
 var (
 	// TODO not implemented yet
