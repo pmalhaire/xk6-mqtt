@@ -25,7 +25,7 @@ jobs:
       run: docker run -p 1883:1883 -e "DOCKER_VERNEMQ_ACCEPT_EULA=yes" -e DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on --name vernemq -d vernemq/vernemq
 
     - name: Test from source
-      run: xk6 build --with github.com/pmalhaire/xk6-mqtt=. && ./k6 run --vus 50 --duration 10 test.js
+      run: xk6 build --with github.com/pmalhaire/xk6-mqtt=. && ./k6 run --vus 50 --duration 10s test.js
       
     - name: Test from github
-      run: xk6 build --with github.com/pmalhaire/xk6-mqtt@latest && ./k6 run --vus 50 --duration 10 test.js
+      run: xk6 build --with github.com/pmalhaire/xk6-mqtt@latest && ./k6 run --vus 50 --duration 10s test.js
