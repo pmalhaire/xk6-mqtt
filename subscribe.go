@@ -60,7 +60,8 @@ func (*Mqtt) Consume(
 	token chan paho.Message,
 	// timeout ms
 	timeout uint,
-) string {
+	returnBin bool,
+) interface {} {
 	state := lib.GetState(ctx)
 	if state == nil {
 		common.Throw(common.GetRuntime(ctx), ErrorState)
@@ -73,7 +74,11 @@ func (*Mqtt) Consume(
 
 	select {
 	case msg := <-token:
-		return string(msg.Payload())
+		if returnBin {
+			return msg.Payload()
+		} else {
+			return string(msg.Payload())
+		}
 	case <-time.After(time.Millisecond * time.Duration(timeout)):
 		common.Throw(common.GetRuntime(ctx), ErrorTimeout)
 		return ""
