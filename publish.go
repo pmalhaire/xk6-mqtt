@@ -15,7 +15,7 @@ func (*Mqtt) Publish(
 	client paho.Client,
 	topic string,
 	qos int,
-	message string,
+	message byte,
 	retain bool,
 	timeout int,
 ) {
