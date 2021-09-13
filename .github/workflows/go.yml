@@ -19,7 +19,7 @@ jobs:
         go-version: 1.16
 
     - name: Install xk6
-      run: go install github.com/k6io/xk6/cmd/xk6@latest
+      run: go install go.k6.io/xk6/cmd/xk6@latest
 
     - name: Run mqtt broker
       run: docker run -p 1883:1883 -e "DOCKER_VERNEMQ_ACCEPT_EULA=yes" -e DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on --name vernemq -d vernemq/vernemq
