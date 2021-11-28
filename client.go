@@ -2,6 +2,9 @@ package mqtt
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"os"
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
@@ -28,6 +31,8 @@ func (*Mqtt) Connect(
 	clientid string,
 	// timeout ms
 	timeout uint,
+	// path to local cert
+	certPath string,
 
 ) paho.Client {
 	state := lib.GetState(ctx)
@@ -36,6 +41,22 @@ func (*Mqtt) Connect(
 		return nil
 	}
 	opts := paho.NewClientOptions()
+	// Use local cert if specified
+	if len(certPath) > 0 {
+		mqtt_tls_ca, err := os.ReadFile(certPath)
+		if err != nil {
+			panic(err)
+		}
+
+		root_ca := x509.NewCertPool()
+		load_ca := root_ca.AppendCertsFromPEM([]byte(mqtt_tls_ca))
+		if !load_ca {
+			panic("failed to parse root certificate")
+		}
+		tlsConfig := &tls.Config{RootCAs: root_ca}
+		opts.SetTLSConfig(tlsConfig)
+	}
+
 	for i := range servers {
 		opts.AddBroker(servers[i])
 	}
