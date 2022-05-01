@@ -5,6 +5,7 @@ import (
 )
 
 var (
+	ErrorConnect      = errors.New("connection failed")
 	ErrorState        = errors.New("invalid state")
 	ErrorClient       = errors.New("invalid client given")
 	ErrorTimeout      = errors.New("operation timeout")
