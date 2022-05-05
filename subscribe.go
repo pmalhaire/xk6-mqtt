@@ -5,54 +5,7 @@ import (
 
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"go.k6.io/k6/js/common"
-	"go.k6.io/k6/js/modules"
-)
-
-func init() {
-	modules.Register("k6/x/mqtt", New())
-}
-
-type (
-	// MqttModule is the global module instance that will create Mqtt
-	// instances for each VU.
-	MqttModule struct{}
-
-	// Mqtt represents an instance of the JS module.
-	MqttInstance struct {
-		// modules.VU provides some useful methods for accessing internal k6
-		// objects like the global context, VU state and goja runtime.
-		vu modules.VU
-		// Mqtt is the exported module instance.
-		*Mqtt
-	}
-)
-
-// New returns a pointer to a new RootModule instance.
-func New() *MqttModule {
-	return &MqttModule{}
-}
-
-// Mqtt is the objet to be used in tests
-type Mqtt struct {
-	vu modules.VU
-}
-
-// NewModuleInstance implements the modules.Module interface and returns
-
-// a new instance for each VU.
-func (*MqttModule) NewModuleInstance(vu modules.VU) modules.Instance {
-	return &MqttInstance{vu: vu, Mqtt: &Mqtt{vu: vu}}
-}
-
-func (m *MqttInstance) Exports() modules.Exports {
-	return modules.Exports{Default: m}
-
-}
-
-// Ensure the interfaces are implemented correctly.
-var (
-	_ modules.Instance = &MqttInstance{}
-	_ modules.Module   = &MqttModule{}
+	"go.k6.io/k6/metrics"
 )
 
 // Subscribe to the given topic and returns a channel waiting for the message
@@ -112,6 +65,11 @@ func (m *Mqtt) Consume(
 	select {
 	case msg := <-token:
 		payload := msg.Payload()
+		msgByteLen := len([]byte(payload))
+		state := m.vu.State()
+		state.BuiltinMetrics.DataReceived.Sink.Add(
+			metrics.Sample{Metric: &metrics.Metric{}, Value: float64(msgByteLen), Time: time.Now()},
+		)
 		return string(payload)
 	case <-time.After(time.Millisecond * time.Duration(timeout)):
 		common.Throw(rt, ErrorTimeout)

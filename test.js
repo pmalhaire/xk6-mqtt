@@ -23,6 +23,7 @@ let vus_connections = {}
 // default timeout (ms)
 let timeout = 2000
 
+const msPerSecond = 1000;
 
 let publish_trend = new Trend('publish_time', true);
 let subscribe_trend = new Trend('subscribe_time', true);
@@ -134,7 +135,8 @@ export default function () {
             // timeout in ms
             timeout,
         );
-        publish_trend.add(new Date().getTime() - startTime);
+        let now = new Date().getTime();
+        publish_trend.add(now - startTime);
     } catch (error) {
         err_publish = error
     }
@@ -151,7 +153,8 @@ export default function () {
             // timeout in ms
             timeout,
         );
-        subscribe_trend.add(new Date().getTime() - startTime);
+        let now = new Date().getTime();
+        subscribe_trend.add(now - startTime);
     } catch (error) {
         err_consume = error
     }

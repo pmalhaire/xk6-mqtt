@@ -5,6 +5,7 @@ import (
 
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"go.k6.io/k6/js/common"
+	"go.k6.io/k6/metrics"
 )
 
 // Publish allow to publish one message
@@ -33,7 +34,10 @@ func (m *Mqtt) Publish(
 		common.Throw(rt, ErrorPublish)
 		return
 	}
-	// msgByteLen := len([]byte(message))
-	// WriterData.Sink.Add(stats.Sample{Metric: WriterData, Value: float64(msgByteLen), Time: time.Now()})
+	state := m.vu.State()
+	msgByteLen := len([]byte(message))
+	state.BuiltinMetrics.DataSent.Sink.Add(
+		metrics.Sample{Metric: &metrics.Metric{}, Value: float64(msgByteLen), Time: time.Now()},
+	)
 	return
 }
