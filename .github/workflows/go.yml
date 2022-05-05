@@ -16,7 +16,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.16
+        go-version: 1.18
 
     - name: Install xk6
       run: go install go.k6.io/xk6/cmd/xk6@latest
@@ -26,6 +26,6 @@ jobs:
 
     - name: Test from source
       run: xk6 build --with github.com/pmalhaire/xk6-mqtt=. && ./k6 run --vus 50 --duration 10s test.js
-      
+
     - name: Test from github
       run: xk6 build --with github.com/pmalhaire/xk6-mqtt@latest && ./k6 run --vus 50 --duration 10s test.js
