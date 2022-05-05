@@ -9,6 +9,10 @@ This project is a k6 extension that can be used to load test Mqtt. Per each conn
 
 In order to build the source, you should have the latest version of Go (go1.15) installed. I recommend you to have [gvm](https://github.com/moovweb/gvm) installed.
 
+## k6 version
+
+This extension is uptodate with k6 version v0.38.0 (breaking change) previous version is tagged at tag v0.37.0
+
 ## Build
 
 To build a `k6` binary with this extension, first ensure you have the prerequisites:
@@ -69,10 +73,10 @@ You can run the test using the following command:
 And here's the test result output:
 
 ```bash
-          /\      |‾‾| /‾‾/   /‾‾/   
-     /\  /  \     |  |/  /   /  /    
-    /  \/    \    |     (   /   ‾‾\  
-   /          \   |  |\  \ |  (‾)  | 
+          /\      |‾‾| /‾‾/   /‾‾/
+     /\  /  \     |  |/  /   /  /
+    /  \/    \    |     (   /   ‾‾\
+   /          \   |  |\  \ |  (‾)  |
   / __________ \  |__| \__\ \_____/ .io
 
   execution: local
@@ -83,7 +87,7 @@ And here's the test result output:
            * default: 50 looping VUs for 1m0s (gracefulStop: 30s)
 
 
-running (1m00.0s), 00/50 VUs, 570339 complete and 0 interrupted iterations
+running (1m00.0s), 00/50 VUs, 326051 complete and 0 interrupted iterations
 default ✓ [======================================] 50 VUs  1m0s
 
      ✓ is pub connected
@@ -95,14 +99,15 @@ default ✓ [======================================] 50 VUs  1m0s
 
      █ teardown
 
-     checks...............: 100.00% ✓ 3422034 ✗ 0   
-     data_received........: 0 B     0 B/s
-     data_sent............: 0 B     0 B/s
-     iteration_duration...: avg=5.25ms min=5.96µs med=4.49ms max=59.65ms p(90)=7.39ms p(95)=11.6ms
-     iterations...........: 570339  9504.706041/s
-     publish_time.........: avg=1.73ms min=0s     med=1ms    max=41ms    p(90)=3ms    p(95)=4ms   
-     subscribe_time.......: avg=2.86ms min=0s     med=2ms    max=43ms    p(90)=4ms    p(95)=6ms   
-     vus..................: 50      min=50    max=50
-     vus_max..............: 50      min=50    max=50
+     checks...............: 100.00% ✓ 1956306     ✗ 0
+     data_received........: 14 MB   238 kB/s
+     data_sent............: 14 MB   238 kB/s
+     iteration_duration...: avg=9.19ms min=9.17µs med=8.39ms max=141.6ms p(90)=12.8ms p(95)=16.3ms
+     iterations...........: 326051  5433.374851/s
+     publish_time.........: avg=3.23ms min=0s     med=3ms    max=41ms    p(90)=5ms    p(95)=6ms
+     subscribe_time.......: avg=4.94ms min=0s     med=5ms    max=51ms    p(90)=7ms    p(95)=9ms
+     vus..................: 50      min=50        max=50
+     vus_max..............: 50      min=50        max=50
+
 
 ```
