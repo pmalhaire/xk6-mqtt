@@ -3,91 +3,191 @@ package mqtt
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
+	"fmt"
 	"os"
 	"time"
 
+	"github.com/dop251/goja"
 	paho "github.com/eclipse/paho.mqtt.golang"
+	"github.com/mstoykov/k6-taskqueue-lib/taskqueue"
 	"go.k6.io/k6/js/common"
+	"go.k6.io/k6/js/modules"
 )
 
-// Connect create a connection to mqtt
-func (m *Mqtt) Connect(
-	//ctx context.Context,
-	// The list of URL of  MQTT server to connect to
-	servers []string,
-	// A username to authenticate to the MQTT server
-	user,
-	// Password to match username
-	password string,
-	// clean session setting
-	cleansess bool,
-	// Client id for reader
-	clientid string,
-	// timeout ms
-	timeout uint,
-	// path to local cert
-	certPath string,
+type client struct {
+	vu         modules.VU
+	conf       conf
+	pahoClient paho.Client
+	obj        *goja.Object // the object that is given to js to interact with the WebSocket
 
-) paho.Client {
-	// TODO fix connect is done when no VU is available
-	state := m.vu.State()
+	// listeners
+	// this return goja.value *and* error in order to return error on exception instead of panic
+	// https://pkg.go.dev/github.com/dop251/goja#hdr-Functions
+	messageListener func(goja.Value) (goja.Value, error)
+	errorListener   func(goja.Value) (goja.Value, error)
+	tq              *taskqueue.TaskQueue
+	messageChan     chan paho.Message
+	subRefCount     int
+}
+
+type conf struct {
+	// The list of URL of  MQTT server to connect to
+	servers []string
+	// A username to authenticate to the MQTT server
+	user string
+	// Password to match username
+	password string
+	// clean session setting
+	cleansess bool
+	// Client id for reader
+	clientid string
+	// timeout ms
+	timeout uint
+	// path to local cert
+	certPath string
+}
+
+func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
+	serversArray := c.Argument(0)
 	rt := m.vu.Runtime()
-	if state == nil {
-		common.Throw(rt, ErrorState)
-		return nil
+	if serversArray == nil || goja.IsUndefined(serversArray) {
+		common.Throw(rt, errors.New("Client requires a server list"))
 	}
+	var servers []string
+	var clientConf conf
+	err := rt.ExportTo(serversArray, &servers)
+	if err != nil {
+		common.Throw(rt,
+			fmt.Errorf("Client requires valid server list, but got %q which resulted in %w", serversArray, err))
+	}
+	clientConf.servers = servers
+	userValue := c.Argument(1)
+	if userValue == nil || goja.IsUndefined(userValue) {
+		common.Throw(rt, errors.New("Client requires a user value"))
+	}
+	clientConf.user = userValue.String()
+	passwordValue := c.Argument(2)
+	if userValue == nil || goja.IsUndefined(passwordValue) {
+		common.Throw(rt, errors.New("Client requires a password value"))
+	}
+	clientConf.password = passwordValue.String()
+	cleansessValue := c.Argument(3)
+	if cleansessValue == nil || goja.IsUndefined(cleansessValue) {
+		common.Throw(rt, errors.New("Client requires a cleaness value"))
+	}
+	clientConf.cleansess = cleansessValue.ToBoolean()
+
+	clientIDValue := c.Argument(4)
+	if clientIDValue == nil || goja.IsUndefined(clientIDValue) {
+		common.Throw(rt, errors.New("Client requires a clientID value"))
+	}
+	clientConf.clientid = clientIDValue.String()
+
+	timeoutValue := c.Argument(5)
+	if timeoutValue == nil || goja.IsUndefined(timeoutValue) {
+		common.Throw(rt, errors.New("Client requires a timeout value"))
+	}
+	clientConf.timeout = uint(timeoutValue.ToInteger())
+
+	// optional arg
+	if certPathValue := c.Argument(6); certPathValue == nil || goja.IsUndefined(certPathValue) {
+		clientConf.certPath = ""
+	} else {
+		clientConf.certPath = certPathValue.String()
+	}
+
+	client := &client{
+		vu:   m.vu,
+		conf: clientConf,
+		obj:  rt.NewObject(),
+	}
+	must := func(err error) {
+		if err != nil {
+			common.Throw(rt, err)
+		}
+	}
+
+	// TODO add onmessage,onclose and so on
+	must(client.obj.DefineDataProperty(
+		"addEventListener", rt.ToValue(client.AddEventListener), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+	// Temporary function kept for future multiple listeners
+	must(client.obj.DefineDataProperty(
+		"cleanEventListeners", rt.ToValue(client.CleanEventListeners), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+	must(client.obj.DefineDataProperty(
+		"subContinue", rt.ToValue(client.SubContinue), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+	must(client.obj.DefineDataProperty(
+		"connect", rt.ToValue(client.Connect), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+	must(client.obj.DefineDataProperty(
+		"isConnected", rt.ToValue(client.IsConnected), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+	must(client.obj.DefineDataProperty(
+		"publish", rt.ToValue(client.Publish), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+	must(client.obj.DefineDataProperty(
+		"subscribe", rt.ToValue(client.Subscribe), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+
+	must(client.obj.DefineDataProperty(
+		"close", rt.ToValue(client.Close), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+
+	return client.obj
+}
+
+// Connect create a connection to mqtt
+func (c *client) Connect() error {
 	opts := paho.NewClientOptions()
 	// Use local cert if specified
-	if len(certPath) > 0 {
-		mqtt_tls_ca, err := os.ReadFile(certPath)
+	if len(c.conf.certPath) > 0 {
+		mqttTLSCA, err := os.ReadFile(c.conf.certPath)
 		if err != nil {
 			panic(err)
 		}
 
-		root_ca := x509.NewCertPool()
-		load_ca := root_ca.AppendCertsFromPEM([]byte(mqtt_tls_ca))
-		if !load_ca {
+		rootCA := x509.NewCertPool()
+		loadCA := rootCA.AppendCertsFromPEM(mqttTLSCA)
+		if !loadCA {
 			panic("failed to parse root certificate")
 		}
-		tlsConfig := &tls.Config{RootCAs: root_ca}
+		tlsConfig := &tls.Config{RootCAs: rootCA, MinVersion: tls.VersionTLS13}
 		opts.SetTLSConfig(tlsConfig)
 	}
-	for i := range servers {
-		opts.AddBroker(servers[i])
+	for i := range c.conf.servers {
+		opts.AddBroker(c.conf.servers[i])
 	}
-	opts.SetClientID(clientid)
-	opts.SetUsername(user)
-	opts.SetPassword(password)
-	opts.SetCleanSession(cleansess)
+	opts.SetClientID(c.conf.clientid)
+	opts.SetUsername(c.conf.user)
+	opts.SetPassword(c.conf.password)
+	opts.SetCleanSession(c.conf.cleansess)
 	client := paho.NewClient(opts)
 	token := client.Connect()
-	if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
-		rt := m.vu.Runtime()
-		common.Throw(rt, ErrorTimeout)
-		return nil
+	rt := c.vu.Runtime()
+	if !token.WaitTimeout(time.Duration(c.conf.timeout) * time.Millisecond) {
+		common.Throw(rt, ErrTimeout)
+		return ErrTimeout
 	}
 	if token.Error() != nil {
-		rt := m.vu.Runtime()
 		common.Throw(rt, token.Error())
-		return nil
+		return token.Error()
 	}
-	return client
+	c.pahoClient = client
+	return nil
 }
 
 // Close the given client
-func (m *Mqtt) Close(
-	//ctx context.Context,
-	// Mqtt client to be closed
-	client paho.Client,
-	// timeout ms
-	timeout uint,
-) {
-	state := m.vu.State()
-	rt := m.vu.Runtime()
-	if state == nil {
-		common.Throw(rt, ErrorState)
-		return
+// wait for pending connections for timeout (ms) before closing
+func (c *client) Close() {
+	// exit subscribe task queue if running
+	if c.tq != nil {
+		c.tq.Close()
 	}
-	client.Disconnect(timeout)
-	return
+	// disconnect client
+	if c.pahoClient != nil && c.pahoClient.IsConnected() {
+		c.pahoClient.Disconnect(c.conf.timeout)
+	}
+}
+
+// IsConnected the given client
+func (c *client) IsConnected() bool {
+	if c.pahoClient == nil || !c.pahoClient.IsConnected() {
+		return false
+	}
+	return true
 }
