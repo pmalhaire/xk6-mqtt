@@ -3,41 +3,33 @@ package mqtt
 import (
 	"time"
 
-	paho "github.com/eclipse/paho.mqtt.golang"
 	"go.k6.io/k6/js/common"
-	"go.k6.io/k6/metrics"
 )
 
 // Publish allow to publish one message
-func (m *Mqtt) Publish(
-	client paho.Client,
+func (m *client) Publish(
 	topic string,
 	qos int,
 	message string,
 	retain bool,
-	timeout int,
-) {
-	if client == nil {
+	timeout uint,
+) error {
+	if m.pahoClient == nil || !m.pahoClient.IsConnected() {
 		rt := m.vu.Runtime()
-		common.Throw(rt, ErrorClient)
-		return
+		common.Throw(rt, ErrClient)
+		return ErrClient
 	}
 
-	token := client.Publish(topic, byte(qos), retain, message)
+	token := m.pahoClient.Publish(topic, byte(qos), retain, message)
 	if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
 		rt := m.vu.Runtime()
-		common.Throw(rt, ErrorTimeout)
-		return
+		common.Throw(rt, ErrTimeout)
+		return ErrTimeout
 	}
 	if err := token.Error(); err != nil {
 		rt := m.vu.Runtime()
-		common.Throw(rt, ErrorPublish)
-		return
+		common.Throw(rt, ErrPublish)
+		return ErrPublish
 	}
-	state := m.vu.State()
-	msgByteLen := len([]byte(message))
-	state.BuiltinMetrics.DataSent.Sink.Add(
-		metrics.Sample{Metric: &metrics.Metric{}, Value: float64(msgByteLen), Time: time.Now()},
-	)
-	return
+	return nil
 }
