@@ -191,3 +191,18 @@ func (c *client) IsConnected() bool {
 	}
 	return true
 }
+
+// error event for async
+func (c *client) newErrorEvent(msg string) *goja.Object {
+	rt := c.vu.Runtime()
+	o := rt.NewObject()
+	must := func(err error) {
+		if err != nil {
+			common.Throw(rt, err)
+		}
+	}
+
+	must(o.DefineDataProperty("type", rt.ToValue("error"), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+	must(o.DefineDataProperty("message", rt.ToValue(msg), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+	return o
+}
