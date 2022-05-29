@@ -126,7 +126,7 @@ func (c *client) AddEventListener(event string, listener func(goja.Value) (goja.
 	}
 }
 
-// SubContinue to be call in the event listner to wait for more messages
+// SubContinue to be call in message callback to wait for on more message
 // be careful this must be called only in the event loop and it not thread safe
 func (c *client) SubContinue() {
 	c.subRefCount++
