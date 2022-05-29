@@ -166,6 +166,15 @@ export default function () {
                 false,
                 // timeout in ms
                 publishTimeout,
+                // async version experimental to be tested more
+                // (obj) => {
+                //     console.log(obj.type) // publish
+                //     console.log(obj.topic) // published topic
+                // },
+                // (err) => {
+                //     console.log(err.type)  // error
+                //     console.log(err.message)
+                // }
             );
         } catch (error) {
             err_publish = error

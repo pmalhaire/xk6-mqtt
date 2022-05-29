@@ -372,6 +372,201 @@ for (let i = 0; i < messageCount; i++) {
 	require.NoError(t, err)
 }
 
+func TestPubAsyncSub(t *testing.T) {
+	t.Parallel()
+	ts := newTestState(t)
+	rndStr := RandStringRunes(10)
+	err := ts.ev.Start(func() error {
+		_, err := ts.rt.RunString(
+			`
+const k6Topic = "gotest-k6-topic-` + rndStr + `";
+const k6SubId = "gotest-k6-SubID-` + rndStr + `";
+const k6PubId = "gotest-k6-PubID-` + rndStr + `";
+const k6Message = "gotest-k6-message";
+
+const host = "` + host + `";
+const port = "` + port + `";
+const timeout = ` + timeout + `;
+const messageCount = 3;
+
+
+// create publisher client
+let publisher = new mqtt.Client(
+    // The list of URL of  MQTT server to connect to
+    [host + ":" + port],
+    // A username to authenticate to the MQTT server
+    "",
+    // Password to match username
+    "",
+    // clean session setting
+    false,
+    // Client id for reader
+    k6PubId,
+    // timeout in ms
+    timeout,
+)
+
+publisher.connect()
+
+
+// create subscriber client
+let subscriber = new mqtt.Client(
+    // The list of URL of  MQTT server to connect to
+    [host + ":" + port],
+    // A username to authenticate to the MQTT server
+    "",
+    // Password to match username
+    "",
+    // clean session setting
+    false,
+    // Client id for reader
+    k6SubId,
+    // timeout in ms
+    timeout,
+)
+
+subscriber.connect()
+
+
+// subscribe first
+subscriber.subscribe(
+	// topic to be used
+	k6Topic,
+	// The QoS of messages
+	1,
+	// timeout in ms
+	timeout,
+)
+
+let count = messageCount;
+subscriber.addEventListener("message", (obj) => {
+	// closing as we received one message
+	let message = obj.message
+	if (message != k6Message ) {
+		throw new Error("unexpected message content")
+	}
+	// tell the event listener to wait for more messages
+	// remove this if you want to send only one message
+	if (--count > 0) {
+		subscriber.subContinue();
+	} else {
+		subscriber.close(timeout);
+		publisher.close(timeout);
+	}
+})
+
+subscriber.addEventListener("error", (err) => {
+	throw new Error("message error");
+})
+
+
+// publish success and failure
+publisher.publish(
+	// topic to be used
+	k6Topic,
+	// The QoS of messages
+	1,
+	// Message to be sent
+	k6Message,
+	// retain policy on message
+	false,
+	// timeout in ms
+	timeout,
+	(obj) => {
+		if (!obj.type || !obj.topic) {
+			throw new Error("unexpected event");
+		}
+	},
+	(err) => {
+		if (!err.type || !err.message) {
+			throw new Error("unexpected error", err);
+		}
+	}
+);
+
+// publish success only
+publisher.publish(
+	// topic to be used
+	k6Topic,
+	// The QoS of messages
+	1,
+	// Message to be sent
+	k6Message,
+	// retain policy on message
+	false,
+	// timeout in ms
+	timeout,
+	(obj) => {
+		if (!obj.type || !obj.topic) {
+			throw new Error("unexpected event");
+		}
+	}
+);
+
+// publish error only
+publisher.publish(
+	// topic to be used
+	k6Topic,
+	// The QoS of messages
+	1,
+	// Message to be sent
+	k6Message,
+	// retain policy on message
+	false,
+	// timeout in ms
+	timeout,
+	null,
+	(err) => {
+		if (!err.type || !err.message) {
+			throw new Error("unexpected error");
+		}
+	}
+);
+
+publisher.close(timeout);
+subscriber.close(timeout);
+
+// create failer client
+let failer = new mqtt.Client(
+    // The list of URL of  MQTT server to connect to
+    [host + ":" + port],
+    // A username to authenticate to the MQTT server
+    "",
+    // Password to match username
+    "",
+    // clean session setting
+    false,
+    // Client id for reader
+    k6PubId,
+    // timeout in ms
+    timeout,
+)
+
+// publish test failure
+failer.publish(
+	// topic to be used
+	k6Topic,
+	// The QoS of messages
+	1,
+	// Message to be sent
+	k6Message,
+	// retain policy on message
+	false,
+	// timeout in ms
+	timeout,
+	null,
+	(err) => {
+		if (!err.type || !err.message) {
+			throw new Error("unexpected error", err);
+		}
+	}
+);
+`)
+		return err
+	})
+	require.NoError(t, err)
+}
+
 func BenchmarkLoop(t *testing.B) {
 	for i := 0; i < t.N; i++ {
 		ts := newTestState(t)
