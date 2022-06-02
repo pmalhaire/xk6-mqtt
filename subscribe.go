@@ -132,13 +132,6 @@ func (c *client) SubContinue() {
 	c.subRefCount++
 }
 
-// CleanEventLister temporary function to clear the event listner
-// TODO fix this should be either per Iteration or per VU
-func (c *client) CleanEventListeners() {
-	c.messageListener = nil
-	c.errorListener = nil
-}
-
 func (c *client) newMessageEvent(topic, msg string) *goja.Object {
 	rt := c.vu.Runtime()
 	o := rt.NewObject()

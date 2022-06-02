@@ -49,6 +49,12 @@ For example you can use vernemq
 docker run -p 1883:1883 -e "DOCKER_VERNEMQ_ACCEPT_EULA=yes" -e DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on --name vernemq -d vernemq/vernemq
 ```
 
+or Mosquitto
+
+```
+docker run --name mosquitto -d -p 1883:1883 eclipse-mosquitto mosquitto -c /mosquitto-no-auth.conf
+```
+
 ### k6 Test
 
 To use this extension write you test as a js file :

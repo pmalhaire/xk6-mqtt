@@ -1,4 +1,4 @@
-// NOTE : all tests here suppose a running server
+// NOTE : all tests in this file suppose a running mqtt server see README.md
 package mqtt
 
 import (
@@ -124,6 +124,10 @@ func TestBasic(t *testing.T) {
 		timeout,
 	)
 
+	if (client.isConnected() == true) {
+		throw new Error("Unexpected client connect state should be false")
+	}
+
 	try {
 		client.connect()
 	} catch (error) {
@@ -132,6 +136,10 @@ func TestBasic(t *testing.T) {
 
 	if (err != undefined) {
 		throw new Error("Unexpected client connect error:", err)
+	}
+
+	if (client.isConnected() != true) {
+		throw new Error("Unexpected client connect state should be true")
 	}
 
 	try {
@@ -150,6 +158,46 @@ func TestBasic(t *testing.T) {
 		return err
 	})
 	require.NoError(t, err, "please check that your server is running")
+}
+
+func TestTimeout(t *testing.T) {
+	t.Parallel()
+	ts := newTestState(t)
+	rndStr := RandStringRunes(10)
+	str := `const k6Topic = "gotest-k6-topic-` + rndStr + `";
+	const k6SubId = "gotest-k6-SubID-` + rndStr + `";
+	const k6PubId = "gotest-k6-PubID-` + rndStr + `";
+
+	const host = "` + host + `";
+	const port = "` + port + `";
+	// force timeout
+	const timeout = 0;
+
+	let client = new mqtt.Client(
+		// The list of URL of  MQTT server to connect to
+		[host + ":" + port],
+		// A username to authenticate to the MQTT server
+		"",
+		// Password to match username
+		"",
+		// clean session setting
+		false,
+		// Client id for reader
+		k6PubId,
+		// timeout in ms
+		timeout,
+	)
+
+
+	client.connect()
+
+	`
+
+	err := ts.ev.Start(func() error {
+		_, err := ts.rt.RunString(str)
+		return err
+	})
+	require.Error(t, err, "operation timeout at github.com/pmalhaire/xk6-mqtt.(*client).Connect-fm (native)")
 }
 
 func TestSubscribeNoPublish(t *testing.T) {
