@@ -111,9 +111,6 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	// TODO add onmessage,onclose and so on
 	must(client.obj.DefineDataProperty(
 		"addEventListener", rt.ToValue(client.AddEventListener), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
-	// Temporary function kept for future multiple listeners
-	must(client.obj.DefineDataProperty(
-		"cleanEventListeners", rt.ToValue(client.CleanEventListeners), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
 		"subContinue", rt.ToValue(client.SubContinue), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(

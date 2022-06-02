@@ -139,14 +139,14 @@ export default function () {
         check(message, {
             "is content correct": msg => msg == k6Message
         });
-        // tell the event listener to wait for more messages
-        // remove this if you want to send only one message
+
         if (--count > 0) {
+            // tell the subscriber that you want to wait for more than one message
+            // if you don't call subContinue you'll receive only one message per subscribe
             subscriber.subContinue();
         }
     })
     subscriber.addEventListener("error", (err) => {
-        // closing as we received one message
         check(null, {
             "message received": false
         });
@@ -166,12 +166,12 @@ export default function () {
                 false,
                 // timeout in ms
                 publishTimeout,
-                // async version experimental to be tested more
-                // (obj) => {
+                // async publish handlers if needed
+                // (obj) => { // success
                 //     console.log(obj.type) // publish
                 //     console.log(obj.topic) // published topic
                 // },
-                // (err) => {
+                // (err) => { // failure
                 //     console.log(err.type)  // error
                 //     console.log(err.message)
                 // }
@@ -186,6 +186,7 @@ export default function () {
 }
 
 export function teardown() {
+    // closing both connections at VU close
     publisher.close(closeTimeout);
     subscriber.close(closeTimeout);
 }
