@@ -5,6 +5,7 @@ import (
 
 	"github.com/dop251/goja"
 	"go.k6.io/k6/js/common"
+	"go.k6.io/k6/metrics"
 )
 
 // Publish allow to publish one message
@@ -18,25 +19,9 @@ func (c *client) Publish(
 	success func(goja.Value) (goja.Value, error),
 	failure func(goja.Value) (goja.Value, error),
 ) error {
+	// sync case no callback added
 	if success == nil && failure == nil {
-		if c.pahoClient == nil || !c.pahoClient.IsConnected() {
-			rt := c.vu.Runtime()
-			common.Throw(rt, ErrClient)
-			return ErrClient
-		}
-		token := c.pahoClient.Publish(topic, byte(qos), retain, message)
-		// sync case
-		if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
-			rt := c.vu.Runtime()
-			common.Throw(rt, ErrTimeout)
-			return ErrTimeout
-		}
-		if err := token.Error(); err != nil {
-			rt := c.vu.Runtime()
-			common.Throw(rt, ErrPublish)
-			return ErrPublish
-		}
-		return nil
+		return c.publishSync(topic, qos, message, retain, timeout)
 	}
 	// async case
 	callback := c.vu.RegisterCallback()
@@ -80,6 +65,10 @@ func (c *client) Publish(
 			return
 		}
 		callback(func() error {
+			err := c.publishMessageMetric(float64(len(message)))
+			if err != nil {
+				return err
+			}
 			ev := c.newPublishEvent(topic)
 			if success != nil {
 				if _, err := success(ev); err != nil {
@@ -89,6 +78,62 @@ func (c *client) Publish(
 			return nil
 		})
 	}()
+	return nil
+}
+
+func (c *client) publishSync(
+	topic string,
+	qos int,
+	message string,
+	retain bool,
+	timeout uint,
+) error {
+	if c.pahoClient == nil || !c.pahoClient.IsConnected() {
+		rt := c.vu.Runtime()
+		common.Throw(rt, ErrClient)
+		return ErrClient
+	}
+	token := c.pahoClient.Publish(topic, byte(qos), retain, message)
+	// sync case
+	if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
+		rt := c.vu.Runtime()
+		common.Throw(rt, ErrTimeout)
+		return ErrTimeout
+	}
+	if err := token.Error(); err != nil {
+		rt := c.vu.Runtime()
+		common.Throw(rt, ErrPublish)
+		return ErrPublish
+	}
+	err := c.publishMessageMetric(float64(len(message)))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *client) publishMessageMetric(msgLen float64) error {
+	// publish metrics
+	now := time.Now()
+	state := c.vu.State()
+	if state == nil {
+		return ErrState
+	}
+
+	ctx := c.vu.Context()
+	if ctx == nil {
+		return ErrState
+	}
+	metrics.PushIfNotDone(ctx, state.Samples, metrics.Sample{
+		Time:   now,
+		Metric: c.metrics.SentMessages,
+		Value:  float64(1),
+	})
+	metrics.PushIfNotDone(ctx, state.Samples, metrics.Sample{
+		Time:   now,
+		Metric: c.metrics.SentBytes,
+		Value:  msgLen,
+	})
 	return nil
 }
 
