@@ -17,6 +17,7 @@ import (
 
 type client struct {
 	vu         modules.VU
+	metrics    *mqttMetrics
 	conf       conf
 	pahoClient paho.Client
 	obj        *goja.Object // the object that is given to js to interact with the WebSocket
@@ -98,9 +99,10 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	}
 
 	client := &client{
-		vu:   m.vu,
-		conf: clientConf,
-		obj:  rt.NewObject(),
+		vu:      m.vu,
+		metrics: &m.metrics,
+		conf:    clientConf,
+		obj:     rt.NewObject(),
 	}
 	must := func(err error) {
 		if err != nil {

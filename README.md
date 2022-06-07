@@ -74,7 +74,10 @@ Per iteration :
 You can run the test using the following command:
 
 ```bash
+# from previously built version
 ./k6 run --vus 50 --duration 1m examples/test.js
+# from source (you need to be in this repo folder) directly for debug
+xk6 run --vus 50 --duration 1m examples/test.js
 ```
 
 Sample test result output:
@@ -95,7 +98,7 @@ Sample test result output:
            * default: 50 looping VUs for 1m0s (gracefulStop: 30s)
 
 
-running (1m00.0s), 00/50 VUs, 148575 complete and 0 interrupted iterations
+running (1m00.0s), 00/50 VUs, 236183 complete and 0 interrupted iterations
 default ✓ [======================================] 50 VUs  1m0s
 
      ✓ is publisher connected
@@ -106,13 +109,26 @@ default ✓ [======================================] 50 VUs  1m0s
 
      █ teardown
 
-     checks...............: 100.00% ✓ 1634325     ✗ 0
-     data_received........: 0 B     0 B/s
-     data_sent............: 0 B     0 B/s
-     iteration_duration...: avg=20.18ms min=149.12µs med=18.92ms max=100.09ms p(90)=27.41ms p(95)=33.05ms
-     iterations...........: 148575  2475.613925/s
-     vus..................: 50      min=50        max=50
-     vus_max..............: 50      min=50        max=50
+     checks.........................: 100.00%  ✓ 2598013       ✗ 0
+     data_received..................: 0 B      0 B/s
+     data_sent......................: 0 B      0 B/s
+     iteration_duration.............: avg=12.69ms min=104.96µs med=3.44ms max=92.4ms p(90)=44.18ms p(95)=46.17ms
+     iterations.....................: 236183   3933.228118/s
+     mqtt.received.bytes............: 31196010 519516.746376/s
+     mqtt.received.messages.count...: 708549   11799.684355/s
+     mqtt.sent.bytes................: 31196010 519516.746376/s
+     mqtt.sent.messages.count.......: 708549   11799.684355/s
+     vus............................: 50       min=50          max=50
+     vus_max........................: 50       min=50          max=50
 
 
 ```
+
+## ROADMAP
+
+- Add examples with events for async functions (k6/events)
+- Make subscribe function async
+- Update the code to allow multiple event listener or at least clean the singleton
+- Allow multiple subscribe calls
+- Test https://github.com/goiiot/libmqtt as an alternate client (pprof shows bottleneck in paho client)
+- Investigate performance there are string copy made in sync publish function that should not be done

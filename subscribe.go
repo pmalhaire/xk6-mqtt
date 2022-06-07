@@ -8,6 +8,7 @@ import (
 	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/mstoykov/k6-taskqueue-lib/taskqueue"
 	"go.k6.io/k6/js/common"
+	"go.k6.io/k6/metrics"
 )
 
 // Subscribe to the given topic message will be received using addEventListener
@@ -50,6 +51,31 @@ func (c *client) Subscribe(
 	return nil
 }
 
+func (c *client) receiveMessageMetric(msgLen float64) error {
+	// publish metrics
+	now := time.Now()
+	state := c.vu.State()
+	if state == nil {
+		return ErrState
+	}
+
+	ctx := c.vu.Context()
+	if ctx == nil {
+		return ErrState
+	}
+	metrics.PushIfNotDone(ctx, state.Samples, metrics.Sample{
+		Time:   now,
+		Metric: c.metrics.ReceivedMessages,
+		Value:  float64(1),
+	})
+	metrics.PushIfNotDone(ctx, state.Samples, metrics.Sample{
+		Time:   now,
+		Metric: c.metrics.ReceivedBytes,
+		Value:  msgLen,
+	})
+	return nil
+}
+
 //nolint:gocognit
 func (c *client) loop(messageChan <-chan paho.Message, timeout uint) {
 	ctx := c.vu.Context()
@@ -63,7 +89,13 @@ func (c *client) loop(messageChan <-chan paho.Message, timeout uint) {
 				return
 			}
 			c.tq.Queue(func() error {
-				ev := c.newMessageEvent(msg.Topic(), string(msg.Payload()))
+				payload := string(msg.Payload())
+				ev := c.newMessageEvent(msg.Topic(), payload)
+				// publish associated metric
+				err := c.receiveMessageMetric(float64(len(payload)))
+				if err != nil {
+					return err
+				}
 				// TODO authorize multiple listeners
 				if c.messageListener != nil {
 					if _, err := c.messageListener(ev); err != nil {

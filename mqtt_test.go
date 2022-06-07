@@ -58,6 +58,7 @@ func newTestState(t testing.TB) testState {
 
 	samples := make(chan metrics.SampleContainer, 1000)
 
+	registry := metrics.NewRegistry()
 	state := &lib.State{
 		Group:  root,
 		Dialer: tb.Dialer,
@@ -72,13 +73,15 @@ func newTestState(t testing.TB) testState {
 		},
 		Samples:        samples,
 		TLSConfig:      tb.TLSClientConfig,
-		BuiltinMetrics: metrics.RegisterBuiltinMetrics(metrics.NewRegistry()),
+		BuiltinMetrics: metrics.RegisterBuiltinMetrics(registry),
 		Tags:           lib.NewTagMap(nil),
 	}
 
 	vu := &modulestest.VU{
-		CtxField:     tb.Context,
-		InitEnvField: &common.InitEnvironment{},
+		CtxField: tb.Context,
+		InitEnvField: &common.InitEnvironment{
+			Registry: registry,
+		},
 		RuntimeField: rt,
 		StateField:   state,
 	}
