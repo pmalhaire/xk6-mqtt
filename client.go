@@ -49,6 +49,7 @@ type conf struct {
 	certPath string
 }
 
+//nolint:nosnakecase // their choice not mine
 func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	serversArray := c.Argument(0)
 	rt := m.vu.Runtime()
@@ -192,6 +193,7 @@ func (c *client) IsConnected() bool {
 }
 
 // error event for async
+//nolint:nosnakecase // their choice not mine
 func (c *client) newErrorEvent(msg string) *goja.Object {
 	rt := c.vu.Runtime()
 	o := rt.NewObject()

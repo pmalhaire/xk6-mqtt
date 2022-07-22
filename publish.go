@@ -137,6 +137,7 @@ func (c *client) publishMessageMetric(msgLen float64) error {
 	return nil
 }
 
+//nolint:nosnakecase // their choice not mine
 func (c *client) newPublishEvent(topic string) *goja.Object {
 	rt := c.vu.Runtime()
 	o := rt.NewObject()

@@ -76,7 +76,7 @@ func (c *client) receiveMessageMetric(msgLen float64) error {
 	return nil
 }
 
-//nolint:gocognit
+//nolint:gocognit // todo improve this
 func (c *client) loop(messageChan <-chan paho.Message, timeout uint) {
 	ctx := c.vu.Context()
 	stop := make(chan struct{})
@@ -164,6 +164,7 @@ func (c *client) SubContinue() {
 	c.subRefCount++
 }
 
+//nolint:nosnakecase // their choice not mine
 func (c *client) newMessageEvent(topic, msg string) *goja.Object {
 	rt := c.vu.Runtime()
 	o := rt.NewObject()
