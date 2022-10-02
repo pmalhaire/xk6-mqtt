@@ -46,13 +46,19 @@ First, you need to have your Mqtt development environment setup.
 For example you can use vernemq
 
 ```
-docker run -p 1883:1883 -e "DOCKER_VERNEMQ_ACCEPT_EULA=yes" -e DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on --name vernemq -d vernemq/vernemq
+docker run --rm -p 1883:1883 -e "DOCKER_VERNEMQ_ACCEPT_EULA=yes" -e DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on --name vernemq -d vernemq/vernemq
 ```
 
 or Mosquitto
 
 ```
-docker run --name mosquitto -d -p 1883:1883 eclipse-mosquitto mosquitto -c /mosquitto-no-auth.conf
+docker run --rm --name mosquitto -d -p 1883:1883 eclipse-mosquitto mosquitto -c /mosquitto-no-auth.conf
+```
+
+optional use tls see: https://openest.io/en/services/mqtts-how-to-use-mqtt-with-tls/
+
+```
+docker run -v $PWD/docker_conf/mosquitto:/conf --rm --name mosquitto -p 8883:8883 eclipse-mosquitto mosquitto -c /conf/mosquitto-tls.conf
 ```
 
 ### k6 Test

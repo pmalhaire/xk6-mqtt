@@ -45,8 +45,12 @@ type conf struct {
 	clientid string
 	// timeout ms
 	timeout uint
-	// path to local cert
-	certPath string
+	// path to caRoot path
+	caRootPath string
+	// path to client cert file
+	clientCertPath string
+	// path to client cert key file
+	clientCertKeyPath string
 }
 
 //nolint:nosnakecase // their choice not mine
@@ -92,11 +96,21 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	}
 	clientConf.timeout = uint(timeoutValue.ToInteger())
 
-	// optional arg
-	if certPathValue := c.Argument(6); certPathValue == nil || goja.IsUndefined(certPathValue) {
-		clientConf.certPath = ""
+	// optional args
+	if caRootPathValue := c.Argument(6); caRootPathValue == nil || goja.IsUndefined(caRootPathValue) {
+		clientConf.caRootPath = ""
 	} else {
-		clientConf.certPath = certPathValue.String()
+		clientConf.caRootPath = caRootPathValue.String()
+	}
+	if clientCertPathValue := c.Argument(7); clientCertPathValue == nil || goja.IsUndefined(clientCertPathValue) {
+		clientConf.clientCertPath = ""
+	} else {
+		clientConf.clientCertPath = clientCertPathValue.String()
+	}
+	if clientCertKeyPathValue := c.Argument(8); clientCertKeyPathValue == nil || goja.IsUndefined(clientCertKeyPathValue) {
+		clientConf.clientCertKeyPath = ""
+	} else {
+		clientConf.clientCertKeyPath = clientCertKeyPathValue.String()
 	}
 
 	client := &client{
@@ -135,8 +149,8 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 func (c *client) Connect() error {
 	opts := paho.NewClientOptions()
 	// Use local cert if specified
-	if len(c.conf.certPath) > 0 {
-		mqttTLSCA, err := os.ReadFile(c.conf.certPath)
+	if len(c.conf.caRootPath) > 0 {
+		mqttTLSCA, err := os.ReadFile(c.conf.caRootPath)
 		if err != nil {
 			panic(err)
 		}
@@ -146,7 +160,14 @@ func (c *client) Connect() error {
 		if !loadCA {
 			panic("failed to parse root certificate")
 		}
-		tlsConfig := &tls.Config{RootCAs: rootCA, MinVersion: tls.VersionTLS13}
+		cert, err := tls.LoadX509KeyPair(c.conf.clientCertPath, c.conf.clientCertKeyPath)
+		if err != nil {
+			panic("failed to parse client certificate")
+		}
+		tlsConfig := &tls.Config{
+			RootCAs: rootCA, MinVersion: tls.VersionTLS13,
+			Certificates: []tls.Certificate{cert},
+		}
 		opts.SetTLSConfig(tlsConfig)
 	}
 	for i := range c.conf.servers {
