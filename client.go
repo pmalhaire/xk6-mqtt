@@ -148,26 +148,40 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 // Connect create a connection to mqtt
 func (c *client) Connect() error {
 	opts := paho.NewClientOptions()
-	// Use local cert if specified
+
+	var tlsConfig *tls.Config
+	// Use root CA if specified
 	if len(c.conf.caRootPath) > 0 {
 		mqttTLSCA, err := os.ReadFile(c.conf.caRootPath)
 		if err != nil {
 			panic(err)
 		}
-
 		rootCA := x509.NewCertPool()
 		loadCA := rootCA.AppendCertsFromPEM(mqttTLSCA)
 		if !loadCA {
 			panic("failed to parse root certificate")
 		}
+		tlsConfig = &tls.Config{
+			RootCAs:    rootCA,
+			MinVersion: tls.VersionTLS13,
+		}
+	}
+	// Use local cert if specified
+	if len(c.conf.clientCertPath) > 0 {
 		cert, err := tls.LoadX509KeyPair(c.conf.clientCertPath, c.conf.clientCertKeyPath)
 		if err != nil {
 			panic("failed to parse client certificate")
 		}
-		tlsConfig := &tls.Config{
-			RootCAs: rootCA, MinVersion: tls.VersionTLS13,
-			Certificates: []tls.Certificate{cert},
+		if tlsConfig != nil {
+			tlsConfig.Certificates = []tls.Certificate{cert}
+		} else {
+			tlsConfig = &tls.Config{
+				Certificates: []tls.Certificate{cert},
+				MinVersion:   tls.VersionTLS13,
+			}
 		}
+	}
+	if tlsConfig != nil {
 		opts.SetTLSConfig(tlsConfig)
 	}
 	for i := range c.conf.servers {
