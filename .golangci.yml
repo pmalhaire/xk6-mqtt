@@ -73,4 +73,6 @@ linters:
   - tagliatelle
   - exhaustruct
   - stylecheck
+  - funlen
+  - gocognit
   fast: false
