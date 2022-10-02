@@ -228,6 +228,7 @@ func (c *client) IsConnected() bool {
 }
 
 // error event for async
+//
 //nolint:nosnakecase // their choice not mine
 func (c *client) newErrorEvent(msg string) *goja.Object {
 	rt := c.vu.Runtime()
