@@ -9,6 +9,7 @@ import (
 )
 
 // Publish allow to publish one message
+//
 //nolint:gocognit
 func (c *client) Publish(
 	topic string,
