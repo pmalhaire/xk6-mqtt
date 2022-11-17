@@ -1,6 +1,8 @@
 package mqtt
 
 import (
+	"errors"
+
 	"go.k6.io/k6/js/modules"
 	"go.k6.io/k6/metrics"
 )
@@ -15,9 +17,15 @@ type mqttMetrics struct {
 // registerMetrics registers the metrics for the mqtt module in the metrics registry
 func registerMetrics(vu modules.VU) (mqttMetrics, error) {
 	var err error
-	registry := vu.InitEnv().Registry
 	m := mqttMetrics{}
-
+	env := vu.InitEnv()
+	if env == nil {
+		return m, errors.New("missing env")
+	}
+	registry := env.Registry
+	if registry == nil {
+		return m, errors.New("missing registry")
+	}
 	m.SentBytes, err = registry.NewMetric("mqtt.sent.bytes", metrics.Counter)
 	if err != nil {
 		return m, err

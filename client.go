@@ -1,3 +1,4 @@
+// Package mqtt xk6 extenstion to suppor mqtt with k6
 package mqtt
 
 import (

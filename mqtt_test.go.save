@@ -17,6 +17,8 @@ import (
 	"gopkg.in/guregu/null.v3"
 )
 
+// TO BE REACTIVATED WHEN POSSIBLE
+
 // test server params
 const host = "localhost"
 
@@ -74,14 +76,11 @@ func newTestState(t testing.TB) testState {
 		Samples:        samples,
 		TLSConfig:      tb.TLSClientConfig,
 		BuiltinMetrics: metrics.RegisterBuiltinMetrics(registry),
-		Tags:           lib.NewTagMap(nil),
+		Tags:           lib.NewVUStateTags(registry.RootTagSet()),
 	}
 
 	vu := &modulestest.VU{
-		CtxField: tb.Context,
-		InitEnvField: &common.InitEnvironment{
-			Registry: registry,
-		},
+		CtxField:     tb.Context,
 		RuntimeField: rt,
 		StateField:   state,
 	}
