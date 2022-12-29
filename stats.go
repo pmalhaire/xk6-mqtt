@@ -12,6 +12,7 @@ type mqttMetrics struct {
 	ReceivedBytes    *metrics.Metric
 	SentMessages     *metrics.Metric
 	ReceivedMessages *metrics.Metric
+	TagsAndMeta      *metrics.TagsAndMeta
 }
 
 // registerMetrics registers the metrics for the mqtt module in the metrics registry
@@ -44,6 +45,9 @@ func registerMetrics(vu modules.VU) (mqttMetrics, error) {
 	m.ReceivedMessages, err = registry.NewMetric("mqtt.received.messages.count", metrics.Counter)
 	if err != nil {
 		return m, err
+	}
+	m.TagsAndMeta = &metrics.TagsAndMeta{
+		Tags: registry.RootTagSet(),
 	}
 	return m, nil
 }

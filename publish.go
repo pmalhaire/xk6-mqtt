@@ -126,12 +126,12 @@ func (c *client) publishMessageMetric(msgLen float64) error {
 		return ErrState
 	}
 	metrics.PushIfNotDone(ctx, state.Samples, metrics.Sample{
-		TimeSeries: metrics.TimeSeries{Metric: c.metrics.SentMessages, Tags: nil},
+		TimeSeries: metrics.TimeSeries{Metric: c.metrics.SentMessages, Tags: c.metrics.TagsAndMeta.Tags},
 		Time:       now,
 		Value:      float64(1),
 	})
 	metrics.PushIfNotDone(ctx, state.Samples, metrics.Sample{
-		TimeSeries: metrics.TimeSeries{Metric: c.metrics.SentBytes, Tags: nil},
+		TimeSeries: metrics.TimeSeries{Metric: c.metrics.SentBytes, Tags: c.metrics.TagsAndMeta.Tags},
 		Time:       now,
 		Value:      msgLen,
 	})

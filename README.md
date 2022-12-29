@@ -130,6 +130,14 @@ default ✓ [======================================] 50 VUs  1m0s
 
 ```
 
+### optional test influx
+
+```
+docker run --rm --name mosquitto -d -p 1883:1883 eclipse-mosquitto mosquitto -c /mosquitto-no-auth.conf
+docker run --rm --name influx -d -p 8086:8086 influxdb:1.8-alpine
+K6_OUT=influxdb=localhost:8086 xk6 run --vus 50 --duration 1m examples/test.js
+```
+
 ## ROADMAP
 
 - Add examples with events for async functions (k6/events)
