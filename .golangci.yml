@@ -75,4 +75,5 @@ linters:
   - stylecheck
   - funlen
   - gocognit
+  - depguard
   fast: false
