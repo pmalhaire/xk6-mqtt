@@ -81,7 +81,7 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	clientConf.password = passwordValue.String()
 	cleansessValue := c.Argument(3)
 	if cleansessValue == nil || goja.IsUndefined(cleansessValue) {
-		common.Throw(rt, errors.New("Client requires a cleaness value"))
+		common.Throw(rt, errors.New("Client requires a cleansess value"))
 	}
 	clientConf.cleansess = cleansessValue.ToBoolean()
 
