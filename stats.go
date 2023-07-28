@@ -27,22 +27,22 @@ func registerMetrics(vu modules.VU) (mqttMetrics, error) {
 	if registry == nil {
 		return m, errors.New("missing registry")
 	}
-	m.SentBytes, err = registry.NewMetric("mqtt.sent.bytes", metrics.Counter)
+	m.SentBytes, err = registry.NewMetric("mqtt_sent_bytes", metrics.Counter)
 	if err != nil {
 		return m, err
 	}
 
-	m.ReceivedBytes, err = registry.NewMetric("mqtt.received.bytes", metrics.Counter)
+	m.ReceivedBytes, err = registry.NewMetric("mqtt_received_bytes", metrics.Counter)
 	if err != nil {
 		return m, err
 	}
 
-	m.SentMessages, err = registry.NewMetric("mqtt.sent.messages.count", metrics.Counter)
+	m.SentMessages, err = registry.NewMetric("mqtt_sent_messages_count", metrics.Counter)
 	if err != nil {
 		return m, err
 	}
 
-	m.ReceivedMessages, err = registry.NewMetric("mqtt.received.messages.count", metrics.Counter)
+	m.ReceivedMessages, err = registry.NewMetric("mqtt_received_messages_count", metrics.Counter)
 	if err != nil {
 		return m, err
 	}

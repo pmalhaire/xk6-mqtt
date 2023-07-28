@@ -1,6 +1,6 @@
-module github.com/pmalhaire/xk6-mqtt
+module github.com/csc-piscopo/xk6-mqtt
 
-go 1.18
+go 1.20
 
 require (
 	github.com/dop251/goja v0.0.0-20230707174833-636fdf960de1

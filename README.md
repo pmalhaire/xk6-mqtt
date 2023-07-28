@@ -12,7 +12,7 @@ The consumer is not meant to be used for testing Mqtt under load.
 
 ## k6 version
 
-This extension is tested with k6 version `v0.43.1` last release is [v0.39.2](https://github.com/pmalhaire/xk6-mqtt/releases/tag/v0.39.2).
+This extension is tested with k6 version `v0.43.1` last release is [v0.39.2](https://github.com/csc-piscopo/xk6-mqtt/releases/tag/v0.39.2).
 
 
 ## Build & Run
@@ -28,11 +28,11 @@ Run the following commands.
 # 1. Create path for k6 (here my_k6_path)
 mkdir my_k6_path
 # 2. Build the k6 binary including the extension in the current path with
-docker run --rm -it -u "$(id -u):$(id -g)" -v "${PWD}:/xk6" grafana/xk6 build v0.43.1 --with github.com/pmalhaire/xk6-mqtt@v0.39.2
+docker run --rm -it -u "$(id -u):$(id -g)" -v "${PWD}:/xk6" grafana/xk6 build v0.43.1 --with github.com/csc-piscopo/xk6-mqtt@v0.39.2
 # 3. Run a sample mqtt server
 docker run --rm --name mosquitto -d -p 1883:1883 eclipse-mosquitto mosquitto -c /mosquitto-no-auth.conf
 # 4. Get a test sample test.js file
-wget -O test.js https://raw.githubusercontent.com/pmalhaire/xk6-mqtt/main/examples/test.js
+wget -O test.js https://raw.githubusercontent.com/csc-piscopo/xk6-mqtt/main/examples/test.js
 # 5. Run the test for 10s
 ./k6 run --vus 50 --duration 10s test.js
 ```
@@ -109,9 +109,9 @@ Then, install [xk6](https://github.com/grafana/xk6) and build your custom k6 bin
 
     Build the binary: from source code
   ```shell
-  git clone github.com/pmalhaire/xk6-mqtt
+  git clone github.com/csc-piscopo/xk6-mqtt
   cd xk6-mqtt
-  $ xk6 build --with github.com/pmalhaire/xk6-mqtt=.
+  $ xk6 build --with github.com/csc-piscopo/xk6-mqtt=.
   ```
 
 ## Run & Test
