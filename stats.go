@@ -15,8 +15,15 @@ type mqttMetrics struct {
 	TagsAndMeta      *metrics.TagsAndMeta
 }
 
+type mqttMetricsLabels struct {
+	SentBytesLabel             string
+	ReceivedBytesLabel         string
+	SentMessagesCountLabel     string
+	ReceivedMessagesCountLabel string
+}
+
 // registerMetrics registers the metrics for the mqtt module in the metrics registry
-func registerMetrics(vu modules.VU) (mqttMetrics, error) {
+func registerMetrics(vu modules.VU, labels mqttMetricsLabels) (mqttMetrics, error) {
 	var err error
 	m := mqttMetrics{}
 	env := vu.InitEnv()
@@ -27,22 +34,23 @@ func registerMetrics(vu modules.VU) (mqttMetrics, error) {
 	if registry == nil {
 		return m, errors.New("missing registry")
 	}
-	m.SentBytes, err = registry.NewMetric("mqtt_sent_bytes", metrics.Counter)
+
+	m.SentBytes, err = registry.NewMetric(labels.SentBytesLabel, metrics.Counter)
 	if err != nil {
 		return m, err
 	}
 
-	m.ReceivedBytes, err = registry.NewMetric("mqtt_received_bytes", metrics.Counter)
+	m.ReceivedBytes, err = registry.NewMetric(labels.ReceivedBytesLabel, metrics.Counter)
 	if err != nil {
 		return m, err
 	}
 
-	m.SentMessages, err = registry.NewMetric("mqtt_sent_messages_count", metrics.Counter)
+	m.SentMessages, err = registry.NewMetric(labels.SentMessagesCountLabel, metrics.Counter)
 	if err != nil {
 		return m, err
 	}
 
-	m.ReceivedMessages, err = registry.NewMetric("mqtt_received_messages_count", metrics.Counter)
+	m.ReceivedMessages, err = registry.NewMetric(labels.ReceivedMessagesCountLabel, metrics.Counter)
 	if err != nil {
 		return m, err
 	}
