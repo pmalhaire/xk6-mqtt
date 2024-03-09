@@ -54,6 +54,49 @@ type conf struct {
 	clientCertKeyPath string
 }
 
+const (
+	sentBytesLabel             = "mqtt_sent_bytes"
+	receivedBytesLabel         = "mqtt_received_bytes"
+	sentMessagesCountLabel     = "mqtt_sent_messages_count"
+	receivedMessagesCountLabel = "mqtt_received_messages_count"
+)
+
+func getLabels(labelsArg goja.Value, rt *goja.Runtime) mqttMetricsLabels {
+	labels := mqttMetricsLabels{}
+	metricsLabels := labelsArg
+	if metricsLabels == nil || goja.IsUndefined(metricsLabels) {
+		// set default values
+		labels.SentBytesLabel = sentBytesLabel
+		labels.ReceivedBytesLabel = receivedBytesLabel
+		labels.SentMessagesCountLabel = sentMessagesCountLabel
+		labels.ReceivedMessagesCountLabel = receivedMessagesCountLabel
+		return labels
+	}
+
+	labelsJS, ok := metricsLabels.Export().(map[string]any)
+	if !ok {
+		common.Throw(rt, fmt.Errorf("invalid metricsLabels %#v", metricsLabels.Export()))
+	}
+	labels.SentBytesLabel, ok = labelsJS["sentBytesLabel"].(string)
+	if !ok {
+		common.Throw(rt, fmt.Errorf("invalid metricsLabels sentBytesLabel %#v", metricsLabels.Export()))
+	}
+	labels.ReceivedBytesLabel, ok = labelsJS["receivedBytesLabel"].(string)
+	if !ok {
+		common.Throw(rt, fmt.Errorf("invalid metricsLabels receivedBytesLabel %#v", metricsLabels.Export()))
+	}
+	labels.SentMessagesCountLabel, ok = labelsJS["sentMessagesCountLabel"].(string)
+	if !ok {
+		common.Throw(rt, fmt.Errorf("invalid metricsLabels sentMessagesCountLabel %#v", metricsLabels.Export()))
+	}
+	labels.ReceivedMessagesCountLabel, ok = labelsJS["receivedMessagesCountLabel"].(string)
+	if !ok {
+		common.Throw(rt, fmt.Errorf("invalid metricsLabels receivedMessagesCountLabel %#v", metricsLabels.Export()))
+	}
+
+	return labels
+}
+
 //nolint:nosnakecase // their choice not mine
 func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	serversArray := c.Argument(0)
@@ -81,7 +124,7 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	clientConf.password = passwordValue.String()
 	cleansessValue := c.Argument(3)
 	if cleansessValue == nil || goja.IsUndefined(cleansessValue) {
-		common.Throw(rt, errors.New("Client requires a cleaness value"))
+		common.Throw(rt, errors.New("Client requires a cleansess value"))
 	}
 	clientConf.cleansess = cleansessValue.ToBoolean()
 
@@ -113,10 +156,14 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	} else {
 		clientConf.clientCertKeyPath = clientCertKeyPathValue.String()
 	}
-
+	labels := getLabels(c.Argument(9), rt)
+	metrics, err := registerMetrics(m.vu, labels)
+	if err != nil {
+		common.Throw(m.vu.Runtime(), err)
+	}
 	client := &client{
 		vu:      m.vu,
-		metrics: &m.metrics,
+		metrics: &metrics,
 		conf:    clientConf,
 		obj:     rt.NewObject(),
 	}

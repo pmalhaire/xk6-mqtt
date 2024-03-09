@@ -1,7 +1,6 @@
 package mqtt
 
 import (
-	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/js/modules"
 )
 
@@ -14,18 +13,13 @@ func init() {
 
 // MqttAPI is the k6 extension implementing the Mqtt api
 type MqttAPI struct { //nolint:revive
-	vu      modules.VU
-	metrics mqttMetrics
+	vu modules.VU
 }
 
 // NewModuleInstance implements the modules.Module interface and returns
 // a new instance for each VU.
 func (*RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
-	m, err := registerMetrics(vu)
-	if err != nil {
-		common.Throw(vu.Runtime(), err)
-	}
-	return &MqttAPI{vu: vu, metrics: m}
+	return &MqttAPI{vu: vu}
 }
 
 // Exports exposes the given object in ts
