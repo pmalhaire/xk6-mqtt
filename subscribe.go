@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/dop251/goja"
-	paho "github.com/eclipse/paho.mqtt.golang"
+	paho "github.com/eclipse/paho.golang"
 	"github.com/mstoykov/k6-taskqueue-lib/taskqueue"
 	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/metrics"
