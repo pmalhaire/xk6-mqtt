@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/dop251/goja v0.0.0-20221106173738-3b8a68ca89b4
-	github.com/eclipse/paho.golang v0.21
+	github.com/eclipse/paho.golang v0.12.0
 	github.com/mstoykov/k6-taskqueue-lib v0.1.0
 	github.com/stretchr/testify v1.8.0
 	go.k6.io/k6 v0.41.0
