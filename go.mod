@@ -6,7 +6,7 @@ require (
 	github.com/dop251/goja v0.0.0-20221106173738-3b8a68ca89b4
 	github.com/eclipse/paho.golang v0.12.0
 	github.com/mstoykov/k6-taskqueue-lib v0.1.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.4
 	go.k6.io/k6 v0.41.0
 	gopkg.in/guregu/null.v3 v3.5.0
 )
@@ -54,12 +54,12 @@ require (
 	github.com/tidwall/gjson v1.14.3 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be // indirect
-	golang.org/x/net v0.2.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.2.0 // indirect
-	golang.org/x/term v0.2.0 // indirect
-	golang.org/x/text v0.4.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/sync v0.4.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.2.0 // indirect
 	google.golang.org/genproto v0.0.0-20220426171045-31bebdecfb46 // indirect
 	google.golang.org/grpc v1.49.0 // indirect

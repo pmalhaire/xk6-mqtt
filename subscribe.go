@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"errors"
+	"log"
 	"time"
 
 	"github.com/dop251/goja"
@@ -25,13 +26,16 @@ func (c *client) Subscribe(
 		common.Throw(rt, ErrClient)
 		return ErrClient
 	}
-	c.messageChan = make(chan paho.Message)
-	messageCB := func(client paho.Client, msg paho.Message) {
+	c.messageChan = make(chan paho.WillMessage)
+	messageCB := func(client paho.Client, msg paho.WillMessage) {
 		go func(msg paho.Message) {
 			c.messageChan <- msg
 		}(msg)
 	}
-	token := c.pahoClient.Subscribe(topic, byte(qos), messageCB)
+	token, err := c.pahoClient.Subscribe(topic, byte(qos), messageCB)
+	if (err != nil) {
+		log.Fatal(err)
+	}
 	if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
 		common.Throw(rt, ErrTimeout)
 		return ErrTimeout
@@ -77,7 +81,7 @@ func (c *client) receiveMessageMetric(msgLen float64) error {
 }
 
 //nolint:gocognit // todo improve this
-func (c *client) loop(messageChan <-chan paho.Message, timeout uint) {
+func (c *client) loop(messageChan <-chan paho.WillMessage, timeout uint) {
 	ctx := c.vu.Context()
 	stop := make(chan struct{})
 	defer c.tq.Close()

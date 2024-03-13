@@ -2,10 +2,13 @@
 package mqtt
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"log"
+	"net"
 	"os"
 	"time"
 
@@ -29,7 +32,7 @@ type client struct {
 	messageListener func(goja.Value) (goja.Value, error)
 	errorListener   func(goja.Value) (goja.Value, error)
 	tq              *taskqueue.TaskQueue
-	messageChan     chan paho.Message
+	messageChan     chan paho.WillMessage
 	subRefCount     int
 }
 
@@ -134,8 +137,6 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	must(client.obj.DefineDataProperty(
 		"connect", rt.ToValue(client.Connect), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
-		"isConnected", rt.ToValue(client.IsConnected), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
-	must(client.obj.DefineDataProperty(
 		"publish", rt.ToValue(client.Publish), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
 		"subscribe", rt.ToValue(client.Subscribe), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
@@ -147,63 +148,37 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 }
 
 // Connect create a connection to mqtt
+// NOTE: Allows only ONE server to connect to.
 func (c *client) Connect() error {
-	opts := paho.NewClientOptions()
+	var config paho.ClientConfig
 
-	var tlsConfig *tls.Config
-	// Use root CA if specified
-	if len(c.conf.caRootPath) > 0 {
-		mqttTLSCA, err := os.ReadFile(c.conf.caRootPath)
-		if err != nil {
-			panic(err)
+	var conns []net.Conn
+	for _, server := range c.conf.servers {
+		conn, err := net.Dial("tcp", server)
+		if (err != nil) {
+			log.Fatal(err)
 		}
-		rootCA := x509.NewCertPool()
-		loadCA := rootCA.AppendCertsFromPEM(mqttTLSCA)
-		if !loadCA {
-			panic("failed to parse root certificate")
-		}
-		tlsConfig = &tls.Config{
-			RootCAs:    rootCA,
-			MinVersion: tls.VersionTLS13,
-		}
+		conns = append(conns, conn)
 	}
-	// Use local cert if specified
-	if len(c.conf.clientCertPath) > 0 {
-		cert, err := tls.LoadX509KeyPair(c.conf.clientCertPath, c.conf.clientCertKeyPath)
-		if err != nil {
-			panic("failed to parse client certificate")
-		}
-		if tlsConfig != nil {
-			tlsConfig.Certificates = []tls.Certificate{cert}
-		} else {
-			tlsConfig = &tls.Config{
-				Certificates: []tls.Certificate{cert},
-				MinVersion:   tls.VersionTLS13,
-			}
-		}
-	}
-	if tlsConfig != nil {
-		opts.SetTLSConfig(tlsConfig)
-	}
-	for i := range c.conf.servers {
-		opts.AddBroker(c.conf.servers[i])
-	}
-	opts.SetClientID(c.conf.clientid)
-	opts.SetUsername(c.conf.user)
-	opts.SetPassword(c.conf.password)
-	opts.SetCleanSession(c.conf.cleansess)
-	client := paho.NewClient(opts)
-	token := client.Connect()
+	config.ClientID = c.conf.clientid
+	config.Conn = conns[0] // ALLOWS ONLY ONE SERVER TO CONNECT TO
+	config.PacketTimeout = time.Duration(c.conf.timeout)
+
+	client := paho.NewClient(config)
+	var ctx context.Context
+	ctx, _ = context.WithCancelCause(ctx)
+	var connect *paho.Connect
+	connect.Username = c.conf.user
+	connect.Password = []byte(c.conf.password)
+	connect.ClientID = c.conf.clientid
+
+	_, err := client.Connect(ctx, connect)
 	rt := c.vu.Runtime()
-	if !token.WaitTimeout(time.Duration(c.conf.timeout) * time.Millisecond) {
-		common.Throw(rt, ErrTimeout)
-		return ErrTimeout
+	if err != nil {
+		common.Throw(rt, err)
+		return err
 	}
-	if token.Error() != nil {
-		common.Throw(rt, token.Error())
-		return token.Error()
-	}
-	c.pahoClient = client
+	c.pahoClient = *client
 	return nil
 }
 
@@ -214,18 +189,9 @@ func (c *client) Close() {
 	if c.tq != nil {
 		c.tq.Close()
 	}
-	// disconnect client
-	if c.pahoClient != nil && c.pahoClient.IsConnected() {
-		c.pahoClient.Disconnect(c.conf.timeout)
-	}
-}
 
-// IsConnected the given client
-func (c *client) IsConnected() bool {
-	if c.pahoClient == nil || !c.pahoClient.IsConnected() {
-		return false
-	}
-	return true
+	var disconnect paho.Disconnect
+	c.pahoClient.Disconnect(&disconnect)
 }
 
 // error event for async
