@@ -71,6 +71,8 @@ const send_command_request = {
     },
   }
 
+const my_message = require('vehicle_command_producer_service/sendcommandrequest')
+
 try {
     console.log("in test.js connecting to broker")
     publisher.connect()
