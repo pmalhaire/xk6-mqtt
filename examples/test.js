@@ -67,7 +67,7 @@ const send_command_request = {
           run_blinker_dance: true,
         },
       },
-      enqueue_time: new Date().toISOString(),
+      // enqueue_time: new Date().toISOString(),
     },
   }
 
@@ -81,7 +81,7 @@ try {
             // The QoS of messages
             1,
             // Message to be sent
-            "Hello, k6!",
+            send_command_request, //JSON.stringify(send_command_request),
             // retain policy on message
             false,
             // timeout in ms

@@ -244,15 +244,15 @@ func (c *client) Connect() error {
 	c.clientConfig = cliCfg
 
 	// Publish a test message (use PublishViaQueue if you don't want to wait for a response)
-	fmt.Println("Publishing message, ", "hello")
-	_, publish_error := c.connectionManager.Publish(ctx, &paho.Publish{
-		QoS:     1,
-		Topic:  "vehicle_state_ota/8b9dbede-27fc-485a-a55b-e20a72bcb257",
-		Payload: []byte("hello not thissssss"),
-	})
-	if (publish_error != nil) {
-		return publish_error
-	}
+	// fmt.Println("Publishing message, ", "hello")
+	// _, publish_error := c.connectionManager.Publish(ctx, &paho.Publish{
+	// 	QoS:     1,
+	// 	Topic:  "vehicle_state_ota/8b9dbede-27fc-485a-a55b-e20a72bcb257",
+	// 	Payload: []byte("hello not thissssss"),
+	// })
+	// if (publish_error != nil) {
+	// 	return publish_error
+	// }
 	return nil
 }
 
