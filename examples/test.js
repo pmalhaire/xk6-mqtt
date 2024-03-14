@@ -71,7 +71,12 @@ const send_command_request = {
     },
   }
 
-const my_message = require('vehicle_command_producer_service/sendcommandrequest')
+  const vehicle_state_request = {
+    doors_locked: false,
+  };
+
+// const my_message = require('vehicle_command_producer_service/sendcommandrequest')
+
 
 try {
     console.log("in test.js connecting to broker")
@@ -83,7 +88,7 @@ try {
             // The QoS of messages
             1,
             // Message to be sent
-            send_command_request, //JSON.stringify(send_command_request),
+            JSON.stringify(vehicle_state_request),
             // retain policy on message
             false,
             // timeout in ms
