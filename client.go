@@ -3,37 +3,29 @@ package mqtt
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
-	"log"
-	"net"
-	"os"
+	"net/url"
 	"time"
 
 	"github.com/dop251/goja"
 	paho "github.com/eclipse/paho.golang/paho"
+	"github.com/eclipse/paho.golang/autopaho"
 	"github.com/mstoykov/k6-taskqueue-lib/taskqueue"
+	// "go.uber.org/zap"
 	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/js/modules"
 )
 
+// To preserve the connection
 type client struct {
 	vu         modules.VU
 	metrics    *mqttMetrics
 	conf       conf
-	pahoClient paho.Client
 	obj        *goja.Object // the object that is given to js to interact with the WebSocket
-
-	// listeners
-	// this return goja.value *and* error in order to return error on exception instead of panic
-	// https://pkg.go.dev/github.com/dop251/goja#hdr-Functions
-	messageListener func(goja.Value) (goja.Value, error)
-	errorListener   func(goja.Value) (goja.Value, error)
 	tq              *taskqueue.TaskQueue
-	messageChan     chan paho.WillMessage
-	subRefCount     int
+	connectionManager *autopaho.ConnectionManager
+	clientConfig 	autopaho.ClientConfig
 }
 
 type conf struct {
@@ -59,6 +51,7 @@ type conf struct {
 
 //nolint:nosnakecase // their choice not mine
 func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
+	fmt.Println("In client.go, Creating client")
 	serversArray := c.Argument(0)
 	rt := m.vu.Runtime()
 	if serversArray == nil || goja.IsUndefined(serversArray) {
@@ -129,17 +122,10 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 		}
 	}
 
-	// TODO add onmessage,onclose and so on
-	must(client.obj.DefineDataProperty(
-		"addEventListener", rt.ToValue(client.AddEventListener), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
-	must(client.obj.DefineDataProperty(
-		"subContinue", rt.ToValue(client.SubContinue), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
 		"connect", rt.ToValue(client.Connect), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
 		"publish", rt.ToValue(client.Publish), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
-	must(client.obj.DefineDataProperty(
-		"subscribe", rt.ToValue(client.Subscribe), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
 
 	must(client.obj.DefineDataProperty(
 		"close", rt.ToValue(client.Close), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
@@ -147,51 +133,165 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	return client.obj
 }
 
+// type ConnectionPreserver struct {
+// 	connectionManager *autopaho.ConnectionManager
+// }
+
+// func (c *ConnectionPreserver) init_connection(ctx context.Context, cliCfg *autopaho.ClientConfig) error {
+//     connection, err := autopaho.NewConnection(ctx, *cliCfg)
+//     if err != nil {
+//         return err
+//     }
+//     if err = connection.AwaitConnection(ctx); err != nil {
+//         return fmt.Errorf("failed to connect to broker: %w", err)
+//     }
+//     c.connectionManager = connection
+//     return nil
+// }
+
 // Connect create a connection to mqtt
-// NOTE: Allows only ONE server to connect to.
 func (c *client) Connect() error {
-	var config paho.ClientConfig
+	fmt.Println("connecting client, ")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
 
-	var conns []net.Conn
+	parsed_urls := []*url.URL{}
 	for _, server := range c.conf.servers {
-		conn, err := net.Dial("tcp", server)
-		if (err != nil) {
-			log.Fatal(err)
+		parsed_url, err := url.Parse(server)
+		if err != nil {
+			panic(err)
 		}
-		conns = append(conns, conn)
+		parsed_urls = append(parsed_urls, parsed_url)
 	}
-	config.ClientID = c.conf.clientid
-	config.Conn = conns[0] // ALLOWS ONLY ONE SERVER TO CONNECT TO
-	config.PacketTimeout = time.Duration(c.conf.timeout)
 
-	client := paho.NewClient(config)
-	var ctx context.Context
-	ctx, _ = context.WithCancelCause(ctx)
-	var connect *paho.Connect
-	connect.Username = c.conf.user
-	connect.Password = []byte(c.conf.password)
-	connect.ClientID = c.conf.clientid
+	topic := "hello, test_topic"
 
-	_, err := client.Connect(ctx, connect)
-	rt := c.vu.Runtime()
+
+	cliCfg := autopaho.ClientConfig{
+		ServerUrls: parsed_urls,
+		KeepAlive:  20, // Keepalive message should be sent every 20 seconds
+		// CleanStartOnInitialConnection defaults to false. Setting this to true will clear the session on the first connection.
+		CleanStartOnInitialConnection: false,
+		// SessionExpiryInterval - Seconds that a session will survive after disconnection.
+		// It is important to set this because otherwise, any queued messages will be lost if the connection drops and
+		// the server will not queue messages while it is down. The specific setting will depend upon your needs
+		// (60 = 1 minute, 3600 = 1 hour, 86400 = one day, 0xFFFFFFFE = 136 years, 0xFFFFFFFF = don't expire)
+		SessionExpiryInterval: 60,
+		OnConnectionUp: func(cm *autopaho.ConnectionManager, connAck *paho.Connack) {
+			fmt.Println("mqtt connection up")
+			// Subscribing in the OnConnectionUp callback is recommended (ensures the subscription is reestablished if
+			// the connection drops)
+			if _, err := cm.Subscribe(context.Background(), &paho.Subscribe{
+				Subscriptions: []paho.SubscribeOptions{
+					{Topic: topic, QoS: 1},
+				},
+			}); err != nil {
+				fmt.Printf("failed to subscribe (%s). This is likely to mean no messages will be received.", err)
+			}
+			// fmt.Println("mqtt subscription made")
+		},
+		OnConnectError: func(err error) { fmt.Printf("error whilst attempting connection: %s\n", err) },
+		// eclipse/paho.golang/paho provides base mqtt functionality, the below config will be passed in for each connection
+		ClientConfig: paho.ClientConfig{
+			// If you are using QOS 1/2, then it's important to specify a client id (which must be unique)
+			ClientID: c.conf.clientid,
+			// OnPublishReceived is a slice of functions that will be called when a message is received.
+			// You can write the function(s) yourself or use the supplied Router
+			OnPublishReceived: []func(paho.PublishReceived) (bool, error){
+				func(pr paho.PublishReceived) (bool, error) {
+					fmt.Printf("received message on topic %s; body: %s (retain: %t)\n", pr.Packet.Topic, pr.Packet.Payload, pr.Packet.Retain)
+					return true, nil
+				}},
+			OnClientError: func(err error) { fmt.Printf("client error: %s\n", err) },
+			OnServerDisconnect: func(d *paho.Disconnect) {
+				fmt.Println("WE ARE DISCONNECTED")
+				if d.Properties != nil {
+					fmt.Printf("server requested disconnect: %s\n", d.Properties.ReasonString)
+				} else {
+					fmt.Printf("server requested disconnect; reason code: %d\n", d.ReasonCode)
+				}
+			},
+		},
+	}
+	cliCfg.ConnectUsername = c.conf.user
+	cliCfg.ConnectPassword = []byte(c.conf.password)
+
+	// connection, err := autopaho.NewConnection(ctx, cliCfg) // starts process; will reconnect until context cancelled
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// // Wait for the connection to come up
+	// if err = connection.AwaitConnection(ctx); err != nil {
+	// 	fmt.Println("failed to connect to broker!!!!!!")
+	// 	panic(err)
+	// }
+
+	// // preserved_connection := ConnectionPreserver{}
+	// // preserved_connection.init_connection(ctx, &cliCfg)
+
+	// c.connectionManager = connection
+
+	var err error
+	c.connectionManager, err = autopaho.NewConnection(ctx, cliCfg)
 	if err != nil {
-		common.Throw(rt, err)
-		return err
+		panic(err)
 	}
-	c.pahoClient = *client
+	if err = c.connectionManager.AwaitConnection(ctx); err != nil {
+		fmt.Println("failed to connect to broker!!!!!!")
+		panic(err)
+	}
+
+	c.clientConfig = cliCfg
+
+	// Publish a test message (use PublishViaQueue if you don't want to wait for a response)
+	fmt.Println("Publishing message, ", "hello")
+	_, publish_error := c.connectionManager.Publish(ctx, &paho.Publish{
+		QoS:     1,
+		Topic:  "vehicle_state_ota/8b9dbede-27fc-485a-a55b-e20a72bcb257",
+		Payload: []byte("hello not thissssss"),
+	})
+	if (publish_error != nil) {
+		return publish_error
+	}
+	return nil
+}
+
+func (c *client) Publish(
+	topic string,
+	qos int,
+	message string,
+	retain bool,
+	timeout uint,
+) error {
+	fmt.Println("inside publish, ", topic, qos, message, retain, timeout)
+	// return nil
+	// sync case no callback added
+	// return nil
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	_, publish_error := c.connectionManager.Publish(ctx, &paho.Publish{
+		QoS:     1,
+		Topic:  topic,
+		Payload: []byte(message),
+	})
+	if (publish_error != nil) {
+		fmt.Println("error publishing message: ", publish_error)
+		return publish_error
+	}
 	return nil
 }
 
 // Close the given client
 // wait for pending connections for timeout (ms) before closing
 func (c *client) Close() {
+	fmt.Println("INSIDE CLOSE")
 	// exit subscribe task queue if running
+	c.connectionManager.Done()
 	if c.tq != nil {
 		c.tq.Close()
 	}
-
-	var disconnect paho.Disconnect
-	c.pahoClient.Disconnect(&disconnect)
 }
 
 // error event for async

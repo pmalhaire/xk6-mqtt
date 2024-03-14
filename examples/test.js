@@ -29,7 +29,7 @@ let subscribeTimeout = 2000
 let closeTimeout = 2000
 
 // Mqtt topic one per VU
-const k6Topic = `test-k6-plugin-topic ${rnd} ${__VU}`;
+const k6Topic = "vehicle_state_ota/8b9dbede-27fc-485a-a55b-e20a72bcb257";
 // Connect IDs one connection per VU
 const k6SubId = `k6-sub-${rnd}-${__VU}`;
 const k6PubId = `k6-pub-${rnd}-${__VU}`;
@@ -37,18 +37,19 @@ const k6PubId = `k6-pub-${rnd}-${__VU}`;
 // number of message pusblished and receives at each iteration
 const messageCount = 3;
 
-const host = "localhost";
-const port = "1883";
+const host = "mqtts://mqtt.mosaic.staging.applied.dev";
+const port = "8883";
 
 
 // create publisher client
+console.log("in test.js, creating client")
 let publisher = new mqtt.Client(
     // The list of URL of  MQTT server to connect to
     [host + ":" + port],
     // A username to authenticate to the MQTT server
-    "",
+    "admin-user",
     // Password to match username
-    "",
+    "oJs43SWfsUZn5gRPqNxC",
     // clean session setting
     false,
     // Client id for reader
@@ -58,102 +59,50 @@ let publisher = new mqtt.Client(
 )
 let err;
 
+const send_command_request = {
+    vehicle_uuid: "8b9dbede-27fc-485a-a55b-e20a72bcb257",
+    command_wrapper: {
+      command: {
+        blinker_dance: {
+          run_blinker_dance: true,
+        },
+      },
+      enqueue_time: new Date().toISOString(),
+    },
+  }
+
 try {
+    console.log("in test.js connecting to broker")
     publisher.connect()
-}
-catch (error) {
-    err = error
-}
-
-if (err != undefined) {
-    console.error("publish connect error:", err)
-    // you may want to use fail here if you want only to test successfull connection only
-    // fail("fatal could not connect to broker for publish")
-}
-
-// create subscriber client
-let subscriber = new mqtt.Client(
-    // The list of URL of  MQTT server to connect to
-    [host + ":" + port],
-    // A username to authenticate to the MQTT server
-    "",
-    // Password to match username
-    "",
-    // clean session setting
-    false,
-    // Client id for reader
-    k6SubId,
-    // timeout in ms
-    connectTimeout,
-)
-
-try {
-    subscriber.connect()
-}
-catch (error) {
-    err = error
-}
-
-if (err != undefined) {
-    console.error("subscribe connect error:", err)
-    // you may want to use fail here if you want only to test successfull connection only
-    // fail("fatal could not connect to broker for subscribe")
-}
-
-export default function () {
-    // Message content one per ITER
-    const k6Message = `k6-message-content-${rnd} ${__VU}:${__ITER}`;
-    check(publisher, {
-        "is publisher connected": publisher => publisher.isConnected()
-    });
-    check(subscriber, {
-        "is subcriber connected": subscriber => subscriber.isConnected()
-    });
-
-    // subscribe first
     try {
-        subscriber.subscribe(
+        publisher.publish(
             // topic to be used
             k6Topic,
             // The QoS of messages
             1,
+            // Message to be sent
+            "Hello, k6!",
+            // retain policy on message
+            false,
             // timeout in ms
-            subscribeTimeout,
-        )
+            publishTimeout,
+        );
     } catch (error) {
-        err = error
+        console.log("We failed to publish!: ", error)
+        err_publish = error
     }
+    console.log("back in test after connecting")
+}
+catch (error) {
+    err = error
+}
 
-    if (err != undefined) {
-        console.error("subscribe error:", err)
-        // you may want to use fail here if you want only to test successfull connection only
-        // fail("fatal could not connect to broker for subscribe")
-    }
-    let count = messageCount;
-    subscriber.addEventListener("message", (obj) => {
-        // closing as we received one message
-        let message = obj.message
-        check(message, {
-            "message received": msg => msg != undefined
-        });
-        check(message, {
-            "is content correct": msg => msg == k6Message
-        });
-
-        if (--count > 0) {
-            // tell the subscriber that you want to wait for more than one message
-            // if you don't call subContinue you'll receive only one message per subscribe
-            subscriber.subContinue();
-        }
-    })
-    subscriber.addEventListener("error", (err) => {
-        check(null, {
-            "message received": false
-        });
-    })
+export default function () {
+    return
     for (let i = 0; i < messageCount; i++) {
         // publish count messages
         let err_publish;
+        // console.log("in test.js, will publish message")
         try {
             publisher.publish(
                 // topic to be used
@@ -161,22 +110,14 @@ export default function () {
                 // The QoS of messages
                 1,
                 // Message to be sent
-                k6Message,
+                "Hello, k6!",
                 // retain policy on message
                 false,
                 // timeout in ms
                 publishTimeout,
-                // async publish handlers if needed
-                // (obj) => { // success
-                //     console.log(obj.type) // publish
-                //     console.log(obj.topic) // published topic
-                // },
-                // (err) => { // failure
-                //     console.log(err.type)  // error
-                //     console.log(err.message)
-                // }
             );
         } catch (error) {
+            console.log("We failed to publish!: ", error)
             err_publish = error
         }
         check(err_publish, {
@@ -188,5 +129,5 @@ export default function () {
 export function teardown() {
     // closing both connections at VU close
     publisher.close(closeTimeout);
-    subscriber.close(closeTimeout);
+    // subscriber.close(closeTimeout);
 }

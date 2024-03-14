@@ -1,9 +1,12 @@
 package mqtt
 
 import (
+	// "context"
+	// "fmt"
 	"time"
 
 	"github.com/dop251/goja"
+	// paho "github.com/eclipse/paho.golang/paho"
 	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/metrics"
 )
@@ -11,101 +14,20 @@ import (
 // Publish allow to publish one message
 //
 //nolint:gocognit
-func (c *client) Publish(
-	topic string,
-	qos int,
-	message string,
-	retain bool,
-	timeout uint,
-	success func(goja.Value) (goja.Value, error),
-	failure func(goja.Value) (goja.Value, error),
-) error {
-	// sync case no callback added
-	if success == nil && failure == nil {
-		return c.publishSync(topic, qos, message, retain, timeout)
-	}
-	// async case
-	callback := c.vu.RegisterCallback()
-	go func() {
-		if c.pahoClient == nil || !c.pahoClient.IsConnected() {
-			callback(func() error {
-				ev := c.newErrorEvent("publish not connected")
-				if failure != nil {
-					if _, err := failure(ev); err != nil {
-						return err
-					}
-				}
-				return nil
-			})
-			return
-		}
-		token := c.pahoClient.Publish(topic, byte(qos), retain, message)
-		if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
-			callback(func() error {
-				ev := c.newErrorEvent("publish timeout")
 
-				if failure != nil {
-					if _, err := failure(ev); err != nil {
-						return err
-					}
-				}
-				return nil
-			})
-			return
-		}
-		if err := token.Error(); err != nil {
-			callback(func() error {
-				ev := c.newErrorEvent(err.Error())
-				if failure != nil {
-					if _, err := failure(ev); err != nil {
-						return err
-					}
-				}
-				return nil
-			})
-			return
-		}
-		callback(func() error {
-			err := c.publishMessageMetric(float64(len(message)))
-			if err != nil {
-				return err
-			}
-			ev := c.newPublishEvent(topic)
-			if success != nil {
-				if _, err := success(ev); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-	}()
-	return nil
-}
 
 func (c *client) publishSync(
 	topic string,
 	qos int,
 	message string,
-	retain bool,
-	timeout uint,
 ) error {
-	if c.pahoClient == nil || !c.pahoClient.IsConnected() {
-		rt := c.vu.Runtime()
-		common.Throw(rt, ErrClient)
-		return ErrClient
-	}
-	token := c.pahoClient.Publish(topic, byte(qos), retain, message)
-	// sync case
-	if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
-		rt := c.vu.Runtime()
-		common.Throw(rt, ErrTimeout)
-		return ErrTimeout
-	}
-	if err := token.Error(); err != nil {
-		rt := c.vu.Runtime()
-		common.Throw(rt, ErrPublish)
-		return ErrPublish
-	}
+	// if c.connectionManager == nil {
+	// 	rt := c.vu.Runtime()
+	// 	common.Throw(rt, ErrClient)
+	// 	return ErrClient
+	// }
+
+
 	err := c.publishMessageMetric(float64(len(message)))
 	if err != nil {
 		return err
