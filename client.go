@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"time"
 
 	"github.com/dop251/goja"
 	paho "github.com/eclipse/paho.golang/paho"
@@ -23,7 +22,7 @@ type client struct {
 	metrics    *mqttMetrics
 	conf       conf
 	obj        *goja.Object // the object that is given to js to interact with the WebSocket
-	tq              *taskqueue.TaskQueue
+	tq              *taskqueue.TaskQueue // get rid of
 	connectionManager *autopaho.ConnectionManager
 	clientConfig 	autopaho.ClientConfig
 }
@@ -152,8 +151,8 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 // Connect create a connection to mqtt
 func (c *client) Connect() error {
 	fmt.Println("connecting client, ")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	defer cancel()
+	ctx := context.Background() // dont put timeout unless reason
+	// defer cancel() // experiment witht his out
 
 	parsed_urls := []*url.URL{}
 	for _, server := range c.conf.servers {
@@ -164,7 +163,6 @@ func (c *client) Connect() error {
 		parsed_urls = append(parsed_urls, parsed_url)
 	}
 
-	topic := "hello, test_topic"
 
 
 	cliCfg := autopaho.ClientConfig{
@@ -179,29 +177,12 @@ func (c *client) Connect() error {
 		SessionExpiryInterval: 60,
 		OnConnectionUp: func(cm *autopaho.ConnectionManager, connAck *paho.Connack) {
 			fmt.Println("mqtt connection up")
-			// Subscribing in the OnConnectionUp callback is recommended (ensures the subscription is reestablished if
-			// the connection drops)
-			if _, err := cm.Subscribe(context.Background(), &paho.Subscribe{
-				Subscriptions: []paho.SubscribeOptions{
-					{Topic: topic, QoS: 1},
-				},
-			}); err != nil {
-				fmt.Printf("failed to subscribe (%s). This is likely to mean no messages will be received.", err)
-			}
-			// fmt.Println("mqtt subscription made")
 		},
 		OnConnectError: func(err error) { fmt.Printf("error whilst attempting connection: %s\n", err) },
 		// eclipse/paho.golang/paho provides base mqtt functionality, the below config will be passed in for each connection
 		ClientConfig: paho.ClientConfig{
 			// If you are using QOS 1/2, then it's important to specify a client id (which must be unique)
 			ClientID: c.conf.clientid,
-			// OnPublishReceived is a slice of functions that will be called when a message is received.
-			// You can write the function(s) yourself or use the supplied Router
-			OnPublishReceived: []func(paho.PublishReceived) (bool, error){
-				func(pr paho.PublishReceived) (bool, error) {
-					fmt.Printf("received message on topic %s; body: %s (retain: %t)\n", pr.Packet.Topic, pr.Packet.Payload, pr.Packet.Retain)
-					return true, nil
-				}},
 			OnClientError: func(err error) { fmt.Printf("client error: %s\n", err) },
 			OnServerDisconnect: func(d *paho.Disconnect) {
 				fmt.Println("WE ARE DISCONNECTED")
@@ -215,21 +196,6 @@ func (c *client) Connect() error {
 	}
 	cliCfg.ConnectUsername = c.conf.user
 	cliCfg.ConnectPassword = []byte(c.conf.password)
-
-	// connection, err := autopaho.NewConnection(ctx, cliCfg) // starts process; will reconnect until context cancelled
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// // Wait for the connection to come up
-	// if err = connection.AwaitConnection(ctx); err != nil {
-	// 	fmt.Println("failed to connect to broker!!!!!!")
-	// 	panic(err)
-	// }
-
-	// // preserved_connection := ConnectionPreserver{}
-	// // preserved_connection.init_connection(ctx, &cliCfg)
-
-	// c.connectionManager = connection
 
 	var err error
 	c.connectionManager, err = autopaho.NewConnection(ctx, cliCfg)
@@ -268,8 +234,7 @@ func (c *client) Publish(
 	// sync case no callback added
 	// return nil
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	defer cancel()
+	ctx := context.Background()
 
 	_, publish_error := c.connectionManager.Publish(ctx, &paho.Publish{
 		QoS:     1,
@@ -288,7 +253,7 @@ func (c *client) Publish(
 func (c *client) Close() {
 	fmt.Println("INSIDE CLOSE")
 	// exit subscribe task queue if running
-	c.connectionManager.Done()
+	c.connectionManager.Done() // use disconnect
 	if c.tq != nil {
 		c.tq.Close()
 	}
