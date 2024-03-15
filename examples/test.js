@@ -8,7 +8,7 @@ tests Mqtt with a 100 messages per connection.
 import {
     check
 } from 'k6';
-import * as vehicle_state_proto from 'generated_js/tools/proto/hive/ota/vehicle_state_pb';
+import * as vehicle_state_proto from 'generated/tools/proto/hive/ota/vehicle_state_pb.d';
 
 
 const mqtt = require('k6/x/mqtt');
