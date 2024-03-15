@@ -8,6 +8,8 @@ tests Mqtt with a 100 messages per connection.
 import {
     check
 } from 'k6';
+import * as vehicle_state_proto from 'generated_js/tools/proto/hive/ota/vehicle_state_pb';
+
 
 const mqtt = require('k6/x/mqtt');
 
@@ -59,6 +61,9 @@ let publisher = new mqtt.Client(
 )
 let err;
 
+const myVehicleState = vehicle_state_proto.VehicleState()
+myVehicleState.setDoorsLocked(false)
+
 const send_command_request = {
     vehicle_uuid: "8b9dbede-27fc-485a-a55b-e20a72bcb257",
     command_wrapper: {
@@ -88,7 +93,7 @@ try {
             // The QoS of messages
             1,
             // Message to be sent
-            JSON.stringify(vehicle_state_request),
+            myVehicleState.encode(), // JSON.stringify(vehicle_state_request),
             // retain policy on message
             false,
             // timeout in ms
