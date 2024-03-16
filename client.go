@@ -222,38 +222,12 @@ func (c *client) Connect() error {
 	return nil
 }
 
-func (c *client) Publish(
-	topic string,
-	qos int,
-	message string,
-	retain bool,
-	timeout uint,
-) error {
-	fmt.Println("inside publish, ", topic, qos, message, retain, timeout)
-	// return nil
-	// sync case no callback added
-	// return nil
-
-	ctx := context.Background()
-
-	_, publish_error := c.connectionManager.Publish(ctx, &paho.Publish{
-		QoS:     1,
-		Topic:  topic,
-		Payload: []byte(message),
-	})
-	if (publish_error != nil) {
-		fmt.Println("error publishing message: ", publish_error)
-		return publish_error
-	}
-	return nil
-}
-
 // Close the given client
 // wait for pending connections for timeout (ms) before closing
 func (c *client) Close() {
-	fmt.Println("INSIDE CLOSE")
 	// exit subscribe task queue if running
-	c.connectionManager.Done() // use disconnect
+	ctx := context.Background()
+	c.connectionManager.Disconnect(ctx) // use disconnect
 	if c.tq != nil {
 		c.tq.Close()
 	}

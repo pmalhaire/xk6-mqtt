@@ -1,0 +1,33 @@
+{
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@babel/preset-env": "^7.24.0",
+    "@types/k6": "^0.49.1",
+    "babel-loader": "^9.1.3",
+    "core-js": "^3.36.0",
+    "k6": "^0.0.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.4.2",
+    "webpack": "^5.90.3",
+    "webpack-cli": "^5.1.4"
+  },
+  "name": "xk6-mqtt",
+  "description": "This is a [k6](https://go.k6.io/k6) extension using the [xk6](https://github.com/grafana/xk6) system.",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "dependencies": {
+    "long": "^5.2.3",
+    "protobufjs": "^7.2.6",
+    "undici-types": "^5.26.5"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "bundle": "webpack"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
