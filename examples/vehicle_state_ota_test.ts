@@ -20,7 +20,7 @@ let subscribeTimeout = 2000
 let closeTimeout = 2000
 
 // Mqtt topic one per VU
-const k6Topic = "vehicle_state_ota/8b9dbede-27fc-485a-a55b-e20a72bcb257";
+const k6Topic = "vehicle_state_ota/820fb0a0-9966-4dcf-9745-028bd047fde7";
 // Connect IDs one connection per VU
 const k6SubId = `k6-sub-${rnd}-${__VU}`;
 const k6PubId = `k6-pub-${rnd}-${__VU}`;
@@ -52,7 +52,16 @@ let err;
 
 var TextFormat = require("protobufjs");
 const myVehicleState = new VehicleStateProtos.VehicleState();
-myVehicleState.setDoorsLocked(true);
+myVehicleState.setDoorsLocked(false);
+const spoiler_state = new VehicleStateProtos.SpoilerState();
+spoiler_state.setPosition(7);
+myVehicleState.setSpoilerState(spoiler_state);
+
+const date = new proto.google.protobuf.Timestamp()
+let curr_date = new Date()
+date.fromDate(curr_date)
+console.log("date is: ", curr_date)
+myVehicleState.setTimestampUtc(date);
 
 try {
     console.log("in test.js connecting to broker")
