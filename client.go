@@ -132,25 +132,8 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	return client.obj
 }
 
-// type ConnectionPreserver struct {
-// 	connectionManager *autopaho.ConnectionManager
-// }
-
-// func (c *ConnectionPreserver) init_connection(ctx context.Context, cliCfg *autopaho.ClientConfig) error {
-//     connection, err := autopaho.NewConnection(ctx, *cliCfg)
-//     if err != nil {
-//         return err
-//     }
-//     if err = connection.AwaitConnection(ctx); err != nil {
-//         return fmt.Errorf("failed to connect to broker: %w", err)
-//     }
-//     c.connectionManager = connection
-//     return nil
-// }
-
 // Connect create a connection to mqtt
 func (c *client) Connect() error {
-	fmt.Println("connecting client, ")
 	ctx := context.Background() // dont put timeout unless reason
 	// defer cancel() // experiment witht his out
 
@@ -175,9 +158,7 @@ func (c *client) Connect() error {
 		// the server will not queue messages while it is down. The specific setting will depend upon your needs
 		// (60 = 1 minute, 3600 = 1 hour, 86400 = one day, 0xFFFFFFFE = 136 years, 0xFFFFFFFF = don't expire)
 		SessionExpiryInterval: 60,
-		OnConnectionUp: func(cm *autopaho.ConnectionManager, connAck *paho.Connack) {
-			fmt.Println("mqtt connection up")
-		},
+		OnConnectionUp: func(cm *autopaho.ConnectionManager, connAck *paho.Connack) {},
 		OnConnectError: func(err error) { fmt.Printf("error whilst attempting connection: %s\n", err) },
 		// eclipse/paho.golang/paho provides base mqtt functionality, the below config will be passed in for each connection
 		ClientConfig: paho.ClientConfig{
@@ -185,7 +166,6 @@ func (c *client) Connect() error {
 			ClientID: c.conf.clientid,
 			OnClientError: func(err error) { fmt.Printf("client error: %s\n", err) },
 			OnServerDisconnect: func(d *paho.Disconnect) {
-				fmt.Println("WE ARE DISCONNECTED")
 				if d.Properties != nil {
 					fmt.Printf("server requested disconnect: %s\n", d.Properties.ReasonString)
 				} else {
@@ -203,22 +183,12 @@ func (c *client) Connect() error {
 		panic(err)
 	}
 	if err = c.connectionManager.AwaitConnection(ctx); err != nil {
-		fmt.Println("failed to connect to broker!!!!!!")
+		fmt.Println("Failed to connect to mqtt broker")
 		panic(err)
 	}
 
 	c.clientConfig = cliCfg
 
-	// Publish a test message (use PublishViaQueue if you don't want to wait for a response)
-	// fmt.Println("Publishing message, ", "hello")
-	// _, publish_error := c.connectionManager.Publish(ctx, &paho.Publish{
-	// 	QoS:     1,
-	// 	Topic:  "vehicle_state_ota/8b9dbede-27fc-485a-a55b-e20a72bcb257",
-	// 	Payload: []byte("hello not thissssss"),
-	// })
-	// if (publish_error != nil) {
-	// 	return publish_error
-	// }
 	return nil
 }
 
