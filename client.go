@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/dop251/goja"
@@ -46,12 +45,12 @@ type conf struct {
 	clientid string
 	// timeout ms
 	timeout uint
-	// path to caRoot path
-	caRootPath string
-	// path to client cert file
-	clientCertPath string
-	// path to client cert key file
-	clientCertKeyPath string
+	// caRoot
+	caRoot string
+	// client cert
+	clientCert string
+	// client cert key
+	clientCertKey string
 }
 
 const (
@@ -141,20 +140,20 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	clientConf.timeout = uint(timeoutValue.ToInteger())
 
 	// optional args
-	if caRootPathValue := c.Argument(6); caRootPathValue == nil || goja.IsUndefined(caRootPathValue) {
-		clientConf.caRootPath = ""
+	if caRootValue := c.Argument(6); caRootValue == nil || goja.IsUndefined(caRootValue) {
+		clientConf.caRoot = ""
 	} else {
-		clientConf.caRootPath = caRootPathValue.String()
+		clientConf.caRoot = caRootValue.String()
 	}
-	if clientCertPathValue := c.Argument(7); clientCertPathValue == nil || goja.IsUndefined(clientCertPathValue) {
-		clientConf.clientCertPath = ""
+	if clientCertValue := c.Argument(7); clientCertValue == nil || goja.IsUndefined(clientCertValue) {
+		clientConf.clientCert = ""
 	} else {
-		clientConf.clientCertPath = clientCertPathValue.String()
+		clientConf.clientCert = clientCertValue.String()
 	}
-	if clientCertKeyPathValue := c.Argument(8); clientCertKeyPathValue == nil || goja.IsUndefined(clientCertKeyPathValue) {
-		clientConf.clientCertKeyPath = ""
+	if clientCertKeyValue := c.Argument(8); clientCertKeyValue == nil || goja.IsUndefined(clientCertKeyValue) {
+		clientConf.clientCertKey = ""
 	} else {
-		clientConf.clientCertKeyPath = clientCertKeyPathValue.String()
+		clientConf.clientCertKey = clientCertKeyValue.String()
 	}
 	labels := getLabels(c.Argument(9), rt)
 	metrics, err := registerMetrics(m.vu, labels)
@@ -199,13 +198,9 @@ func (c *client) Connect() error {
 
 	var tlsConfig *tls.Config
 	// Use root CA if specified
-	if len(c.conf.caRootPath) > 0 {
-		mqttTLSCA, err := os.ReadFile(c.conf.caRootPath)
-		if err != nil {
-			panic(err)
-		}
+	if len(c.conf.caRoot) > 0 {
 		rootCA := x509.NewCertPool()
-		loadCA := rootCA.AppendCertsFromPEM(mqttTLSCA)
+		loadCA := rootCA.AppendCertsFromPEM([]byte(c.conf.caRoot))
 		if !loadCA {
 			panic("failed to parse root certificate")
 		}
@@ -215,8 +210,8 @@ func (c *client) Connect() error {
 		}
 	}
 	// Use local cert if specified
-	if len(c.conf.clientCertPath) > 0 {
-		cert, err := tls.LoadX509KeyPair(c.conf.clientCertPath, c.conf.clientCertKeyPath)
+	if len(c.conf.clientCert) > 0 {
+		cert, err := tls.X509KeyPair([]byte(c.conf.clientCert), []byte(c.conf.clientCertKey))
 		if err != nil {
 			panic("failed to parse client certificate")
 		}
