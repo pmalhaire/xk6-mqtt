@@ -12,7 +12,7 @@ The consumer is not meant to be used for testing Mqtt under load.
 
 ## k6 version
 
-This extension is tested with k6 version `v0.43.1` last release is [v0.39.2](https://github.com/pmalhaire/xk6-mqtt/releases/tag/v0.39.2).
+This extension is tested with k6 version `v0.49.0` last release is [v0.40.0](https://github.com/pmalhaire/xk6-mqtt/releases/tag/v0.40.0).
 
 
 ## Build & Run
@@ -28,7 +28,7 @@ Run the following commands.
 # 1. Create path for k6 (here my_k6_path)
 mkdir my_k6_path
 # 2. Build the k6 binary including the extension in the current path with
-docker run --rm -it -u "$(id -u):$(id -g)" -v "${PWD}:/xk6" grafana/xk6 build v0.43.1 --with github.com/pmalhaire/xk6-mqtt@v0.39.2
+docker run --rm -it -u "$(id -u):$(id -g)" -v "${PWD}:/xk6" grafana/xk6 build v0.49.0 --with github.com/pmalhaire/xk6-mqtt@v0.40.0
 # 3. Run a sample mqtt server
 docker run --rm --name mosquitto -d -p 1883:1883 eclipse-mosquitto mosquitto -c /mosquitto-no-auth.conf
 # 4. Get a test sample test.js file
