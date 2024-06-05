@@ -182,7 +182,7 @@ func (c *client) Connect() error {
 		panic(err)
 	}
 	if err = c.connectionManager.AwaitConnection(ctx); err != nil {
-		fmt.Println("failed to connect to broker!!!!!!")
+		fmt.Println("Failed to connect to mqtt broker")
 		panic(err)
 	}
 

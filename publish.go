@@ -16,8 +16,6 @@ func (c *client) Publish(
 	retain bool,
 	timeout uint,
 ) error {
-	fmt.Println("inside publish, ", topic, message)
-
 	ctx := context.Background()
 
 	_, publish_error := c.connectionManager.Publish(ctx, &paho.Publish{
@@ -26,7 +24,7 @@ func (c *client) Publish(
 		Payload: message,
 	})
 	if (publish_error != nil) {
-		fmt.Println("error publishing message: ", publish_error)
+		fmt.Println("error publishing message: ", publish_error, " to topic: ", topic, " for message: ", message)
 		return publish_error
 	}
 	return nil
