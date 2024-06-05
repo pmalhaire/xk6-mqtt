@@ -8,9 +8,10 @@ import (
 	"net/url"
 
 	"github.com/dop251/goja"
-	paho "github.com/eclipse/paho.golang/paho"
 	"github.com/eclipse/paho.golang/autopaho"
+	paho "github.com/eclipse/paho.golang/paho"
 	"github.com/mstoykov/k6-taskqueue-lib/taskqueue"
+
 	// "go.uber.org/zap"
 	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/js/modules"
@@ -158,7 +159,7 @@ func (c *client) Connect() error {
 		// (60 = 1 minute, 3600 = 1 hour, 86400 = one day, 0xFFFFFFFE = 136 years, 0xFFFFFFFF = don't expire)
 		SessionExpiryInterval: 60,
 		OnConnectionUp: func(cm *autopaho.ConnectionManager, connAck *paho.Connack) {},
-		OnConnectError: func(err error) { fmt.Printf("Error whilst attempting connection: %s\n", err); panic(err) },
+		OnConnectError: func(err error) { fmt.Println("Encountered a connection error: %s\n", err); panic(err) },
 		// eclipse/paho.golang/paho provides base mqtt functionality, the below config will be passed in for each connection
 		ClientConfig: paho.ClientConfig{
 			// If you are using QOS 1/2, then it's important to specify a client id (which must be unique)
