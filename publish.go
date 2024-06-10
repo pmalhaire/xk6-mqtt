@@ -3,7 +3,7 @@ package mqtt
 import (
 	"time"
 
-	"github.com/dop251/goja"
+	"github.com/grafana/sobek"
 	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/metrics"
 )
@@ -17,8 +17,8 @@ func (c *client) Publish(
 	message string,
 	retain bool,
 	timeout uint,
-	success func(goja.Value) (goja.Value, error),
-	failure func(goja.Value) (goja.Value, error),
+	success func(sobek.Value) (sobek.Value, error),
+	failure func(sobek.Value) (sobek.Value, error),
 ) error {
 	// sync case no callback added
 	if success == nil && failure == nil {
@@ -139,7 +139,7 @@ func (c *client) publishMessageMetric(msgLen float64) error {
 }
 
 //nolint:nosnakecase // their choice not mine
-func (c *client) newPublishEvent(topic string) *goja.Object {
+func (c *client) newPublishEvent(topic string) *sobek.Object {
 	rt := c.vu.Runtime()
 	o := rt.NewObject()
 	must := func(err error) {
@@ -148,7 +148,7 @@ func (c *client) newPublishEvent(topic string) *goja.Object {
 		}
 	}
 
-	must(o.DefineDataProperty("type", rt.ToValue("publish"), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
-	must(o.DefineDataProperty("topic", rt.ToValue(topic), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+	must(o.DefineDataProperty("type", rt.ToValue("publish"), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
+	must(o.DefineDataProperty("topic", rt.ToValue(topic), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	return o
 }

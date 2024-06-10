@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/dop251/goja"
 	paho "github.com/eclipse/paho.mqtt.golang"
+	"github.com/grafana/sobek"
 	"github.com/mstoykov/k6-taskqueue-lib/taskqueue"
 	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/metrics"
@@ -146,7 +146,7 @@ func (c *client) loop(messageChan <-chan paho.Message, timeout uint) {
 }
 
 // AddEventListener expose the js method to listen for events
-func (c *client) AddEventListener(event string, listener func(goja.Value) (goja.Value, error)) {
+func (c *client) AddEventListener(event string, listener func(sobek.Value) (sobek.Value, error)) {
 	switch event {
 	case "message":
 		c.messageListener = listener
@@ -165,7 +165,7 @@ func (c *client) SubContinue() {
 }
 
 //nolint:nosnakecase // their choice not mine
-func (c *client) newMessageEvent(topic, msg string) *goja.Object {
+func (c *client) newMessageEvent(topic, msg string) *sobek.Object {
 	rt := c.vu.Runtime()
 	o := rt.NewObject()
 	must := func(err error) {
@@ -174,7 +174,7 @@ func (c *client) newMessageEvent(topic, msg string) *goja.Object {
 		}
 	}
 
-	must(o.DefineDataProperty("topic", rt.ToValue(topic), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
-	must(o.DefineDataProperty("message", rt.ToValue(msg), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+	must(o.DefineDataProperty("topic", rt.ToValue(topic), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
+	must(o.DefineDataProperty("message", rt.ToValue(msg), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	return o
 }
