@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/dop251/goja"
 	paho "github.com/eclipse/paho.mqtt.golang"
+	"github.com/grafana/sobek"
 	"github.com/mstoykov/k6-taskqueue-lib/taskqueue"
 	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/js/modules"
@@ -21,13 +21,13 @@ type client struct {
 	metrics    *mqttMetrics
 	conf       conf
 	pahoClient paho.Client
-	obj        *goja.Object // the object that is given to js to interact with the WebSocket
+	obj        *sobek.Object // the object that is given to js to interact with the WebSocket
 
 	// listeners
-	// this return goja.value *and* error in order to return error on exception instead of panic
+	// this return sobek.value *and* error in order to return error on exception instead of panic
 	// https://pkg.go.dev/github.com/dop251/goja#hdr-Functions
-	messageListener func(goja.Value) (goja.Value, error)
-	errorListener   func(goja.Value) (goja.Value, error)
+	messageListener func(sobek.Value) (sobek.Value, error)
+	errorListener   func(sobek.Value) (sobek.Value, error)
 	tq              *taskqueue.TaskQueue
 	messageChan     chan paho.Message
 	subRefCount     int
@@ -63,10 +63,10 @@ const (
 	receivedMessagesCountLabel = "mqtt_received_messages_count"
 )
 
-func getLabels(labelsArg goja.Value, rt *goja.Runtime) mqttMetricsLabels {
+func getLabels(labelsArg sobek.Value, rt *sobek.Runtime) mqttMetricsLabels {
 	labels := mqttMetricsLabels{}
 	metricsLabels := labelsArg
-	if metricsLabels == nil || goja.IsUndefined(metricsLabels) {
+	if metricsLabels == nil || sobek.IsUndefined(metricsLabels) {
 		// set default values
 		labels.SentBytesLabel = sentBytesLabel
 		labels.ReceivedBytesLabel = receivedBytesLabel
@@ -100,10 +100,10 @@ func getLabels(labelsArg goja.Value, rt *goja.Runtime) mqttMetricsLabels {
 }
 
 //nolint:nosnakecase // their choice not mine
-func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
+func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	serversArray := c.Argument(0)
 	rt := m.vu.Runtime()
-	if serversArray == nil || goja.IsUndefined(serversArray) {
+	if serversArray == nil || sobek.IsUndefined(serversArray) {
 		common.Throw(rt, errors.New("Client requires a server list"))
 	}
 	var servers []string
@@ -115,45 +115,45 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 	}
 	clientConf.servers = servers
 	userValue := c.Argument(1)
-	if userValue == nil || goja.IsUndefined(userValue) {
+	if userValue == nil || sobek.IsUndefined(userValue) {
 		common.Throw(rt, errors.New("Client requires a user value"))
 	}
 	clientConf.user = userValue.String()
 	passwordValue := c.Argument(2)
-	if userValue == nil || goja.IsUndefined(passwordValue) {
+	if userValue == nil || sobek.IsUndefined(passwordValue) {
 		common.Throw(rt, errors.New("Client requires a password value"))
 	}
 	clientConf.password = passwordValue.String()
 	cleansessValue := c.Argument(3)
-	if cleansessValue == nil || goja.IsUndefined(cleansessValue) {
+	if cleansessValue == nil || sobek.IsUndefined(cleansessValue) {
 		common.Throw(rt, errors.New("Client requires a cleansess value"))
 	}
 	clientConf.cleansess = cleansessValue.ToBoolean()
 
 	clientIDValue := c.Argument(4)
-	if clientIDValue == nil || goja.IsUndefined(clientIDValue) {
+	if clientIDValue == nil || sobek.IsUndefined(clientIDValue) {
 		common.Throw(rt, errors.New("Client requires a clientID value"))
 	}
 	clientConf.clientid = clientIDValue.String()
 
 	timeoutValue := c.Argument(5)
-	if timeoutValue == nil || goja.IsUndefined(timeoutValue) {
+	if timeoutValue == nil || sobek.IsUndefined(timeoutValue) {
 		common.Throw(rt, errors.New("Client requires a timeout value"))
 	}
 	clientConf.timeout = uint(timeoutValue.ToInteger())
 
 	// optional args
-	if caRootPathValue := c.Argument(6); caRootPathValue == nil || goja.IsUndefined(caRootPathValue) {
+	if caRootPathValue := c.Argument(6); caRootPathValue == nil || sobek.IsUndefined(caRootPathValue) {
 		clientConf.caRootPath = ""
 	} else {
 		clientConf.caRootPath = caRootPathValue.String()
 	}
-	if clientCertPathValue := c.Argument(7); clientCertPathValue == nil || goja.IsUndefined(clientCertPathValue) {
+	if clientCertPathValue := c.Argument(7); clientCertPathValue == nil || sobek.IsUndefined(clientCertPathValue) {
 		clientConf.clientCertPath = ""
 	} else {
 		clientConf.clientCertPath = clientCertPathValue.String()
 	}
-	if clientCertKeyPathValue := c.Argument(8); clientCertKeyPathValue == nil || goja.IsUndefined(clientCertKeyPathValue) {
+	if clientCertKeyPathValue := c.Argument(8); clientCertKeyPathValue == nil || sobek.IsUndefined(clientCertKeyPathValue) {
 		clientConf.clientCertKeyPath = ""
 	} else {
 		clientConf.clientCertKeyPath = clientCertKeyPathValue.String()
@@ -181,20 +181,20 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 
 	// TODO add onmessage,onclose and so on
 	must(client.obj.DefineDataProperty(
-		"addEventListener", rt.ToValue(client.AddEventListener), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+		"addEventListener", rt.ToValue(client.AddEventListener), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
-		"subContinue", rt.ToValue(client.SubContinue), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+		"subContinue", rt.ToValue(client.SubContinue), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
-		"connect", rt.ToValue(client.Connect), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+		"connect", rt.ToValue(client.Connect), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
-		"isConnected", rt.ToValue(client.IsConnected), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+		"isConnected", rt.ToValue(client.IsConnected), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
-		"publish", rt.ToValue(client.Publish), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+		"publish", rt.ToValue(client.Publish), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
-		"subscribe", rt.ToValue(client.Subscribe), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+		"subscribe", rt.ToValue(client.Subscribe), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 
 	must(client.obj.DefineDataProperty(
-		"close", rt.ToValue(client.Close), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+		"close", rt.ToValue(client.Close), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 
 	return client.obj
 }
@@ -292,7 +292,7 @@ func (c *client) IsConnected() bool {
 // error event for async
 //
 //nolint:nosnakecase // their choice not mine
-func (c *client) newErrorEvent(msg string) *goja.Object {
+func (c *client) newErrorEvent(msg string) *sobek.Object {
 	rt := c.vu.Runtime()
 	o := rt.NewObject()
 	must := func(err error) {
@@ -301,7 +301,7 @@ func (c *client) newErrorEvent(msg string) *goja.Object {
 		}
 	}
 
-	must(o.DefineDataProperty("type", rt.ToValue("error"), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
-	must(o.DefineDataProperty("message", rt.ToValue(msg), goja.FLAG_FALSE, goja.FLAG_FALSE, goja.FLAG_TRUE))
+	must(o.DefineDataProperty("type", rt.ToValue("error"), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
+	must(o.DefineDataProperty("message", rt.ToValue(msg), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	return o
 }
