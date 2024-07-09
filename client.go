@@ -153,7 +153,8 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	} else {
 		clientConf.clientCertPath = clientCertPathValue.String()
 	}
-	if clientCertKeyPathValue := c.Argument(8); clientCertKeyPathValue == nil || sobek.IsUndefined(clientCertKeyPathValue) {
+		if clientCertKeyPathValue := c.Argument(8); clientCertKeyPathValue == nil ||
+		sobek.IsUndefined(clientCertKeyPathValue) {
 		clientConf.clientCertKeyPath = ""
 	} else {
 		clientConf.clientCertKeyPath = clientCertKeyPathValue.String()
