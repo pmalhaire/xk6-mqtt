@@ -53,7 +53,7 @@ type conf struct {
 	// path to client cert key file
 	clientCertKeyPath string
 	// wether to skip the cert validity check
-	skipTlsValidation bool
+	skipTLSValidation bool
 }
 
 const (
@@ -164,8 +164,8 @@ func (m *MqttAPI) client(c goja.ConstructorCall) *goja.Object {
 		common.Throw(m.vu.Runtime(), err)
 	}
 
-	skipTls := c.Argument(10)
-	clientConf.skipTlsValidation = skipTls.ToBoolean()
+	skipTLS := c.Argument(10)
+	clientConf.skipTLSValidation = skipTLS.ToBoolean()
 
 	client := &client{
 		vu:      m.vu,
@@ -236,8 +236,11 @@ func (c *client) Connect() error {
 		}
 	}
 
-	tlsConfig = &tls.Config{
-		InsecureSkipVerify: c.conf.skipTlsValidation,
+	// set tls if skip is forced
+	if c.conf.skipTLSValidation {
+		tlsConfig = &tls.Config{
+			InsecureSkipVerify: c.conf.skipTLSValidation, //nolint:gosec
+		}
 	}
 
 	if tlsConfig != nil {
