@@ -26,7 +26,7 @@ func (c *client) Subscribe(
 		return ErrClient
 	}
 	c.messageChan = make(chan paho.Message)
-	messageCB := func(client paho.Client, msg paho.Message) {
+	messageCB := func(_ paho.Client, msg paho.Message) {
 		go func(msg paho.Message) {
 			c.messageChan <- msg
 		}(msg)
