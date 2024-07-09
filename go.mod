@@ -1,4 +1,4 @@
-module github.com/pmalhaire/xk6-mqtt
+module github.com/ezeeb/xk6-mqtt
 
 go 1.20
 
