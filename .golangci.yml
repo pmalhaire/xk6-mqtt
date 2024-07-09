@@ -76,5 +76,5 @@ linters:
   - funlen
   - gocognit
   - depguard
-  - go-mnd
+  - mnd
   fast: false
