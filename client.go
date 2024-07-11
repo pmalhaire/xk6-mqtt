@@ -47,11 +47,11 @@ type conf struct {
 	clientid string
 	// timeout ms
 	timeout uint
-	// path to caRoot path
+	// caRoot PEM string or path
 	caRoot string
-	// client cert PEM string
+	// client cert PEM string or path
 	clientCert string
-	// client cert PEM string
+	// client cert PEM string or path
 	clientCertKey string
 	// wether to skip the cert validity check
 	skipTLSValidation bool
