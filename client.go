@@ -6,6 +6,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
@@ -119,7 +121,7 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	}
 	clientConf.user = userValue.String()
 	passwordValue := c.Argument(2)
-	if userValue == nil || sobek.IsUndefined(passwordValue) {
+	if passwordValue == nil || sobek.IsUndefined(passwordValue) {
 		common.Throw(rt, errors.New("Client requires a password value"))
 	}
 	clientConf.password = passwordValue.String()
@@ -206,12 +208,20 @@ func (c *client) Connect() error {
 	var tlsConfig *tls.Config
 	// Use root CA if specified
 	if len(c.conf.caRoot) > 0 {
-		//	mqttTLSCA, err := os.ReadFile(c.conf.caRootPath)
-		//	if err != nil {
-		//		panic(err)
-		//	}
+		var caContent []byte
+		if strings.HasPrefix(c.conf.caRoot, "-----BEGIN CERTIFICATE-----") {
+			// PEM content
+			caContent = []byte(c.conf.caRoot)
+		} else {
+			// probably path to pem file
+			var err error
+			caContent, err = os.ReadFile(c.conf.caRoot)
+			if err != nil {
+				panic(err)
+			}
+		}
 		rootCA := x509.NewCertPool()
-		loadCA := rootCA.AppendCertsFromPEM([]byte(c.conf.caRoot))
+		loadCA := rootCA.AppendCertsFromPEM(caContent)
 		if !loadCA {
 			panic("failed to parse root certificate")
 		}
@@ -222,7 +232,15 @@ func (c *client) Connect() error {
 	}
 	// Use local cert if specified
 	if len(c.conf.clientCert) > 0 {
-		cert, err := tls.X509KeyPair([]byte(c.conf.clientCert), []byte(c.conf.clientCertKey))
+		var cert tls.Certificate
+		var err error
+		if strings.HasPrefix(c.conf.clientCert, "-----BEGIN CERTIFICATE-----") && strings.HasPrefix(c.conf.clientCertKey, "-----BEGIN RSA PRIVATE KEY-----") {
+			// PEM content
+			cert, err = tls.X509KeyPair([]byte(c.conf.clientCert), []byte(c.conf.clientCertKey))
+		} else {
+			// probably paths to pem files
+			cert, err = tls.LoadX509KeyPair(c.conf.clientCert, c.conf.clientCertKey)
+		}
 		if err != nil {
 			panic("failed to parse client certificate")
 		}
@@ -231,7 +249,7 @@ func (c *client) Connect() error {
 		} else {
 			tlsConfig = &tls.Config{
 				Certificates: []tls.Certificate{cert},
-				MinVersion:   tls.VersionTLS13,
+				MinVersion:   tls.VersionTLS12,
 			}
 		}
 	}
@@ -253,7 +271,6 @@ func (c *client) Connect() error {
 	opts.SetUsername(c.conf.user)
 	opts.SetPassword(c.conf.password)
 	opts.SetCleanSession(c.conf.cleansess)
-	opts.SetProtocolVersion(4)
 	client := paho.NewClient(opts)
 	token := client.Connect()
 	rt := c.vu.Runtime()
