@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
@@ -47,7 +46,7 @@ type conf struct {
 	// timeout ms
 	timeout uint
 	// path to caRoot path
-	caRootPath string
+	caRoot string
 	// client cert PEM string
 	clientCert string
 	// client cert PEM string
@@ -143,10 +142,10 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	clientConf.timeout = uint(timeoutValue.ToInteger())
 
 	// optional args
-	if caRootPathValue := c.Argument(6); caRootPathValue == nil || sobek.IsUndefined(caRootPathValue) {
-		clientConf.caRootPath = ""
+	if caRootValue := c.Argument(6); caRootValue == nil || sobek.IsUndefined(caRootValue) {
+		clientConf.caRoot = ""
 	} else {
-		clientConf.caRootPath = caRootPathValue.String()
+		clientConf.caRoot = caRootValue.String()
 	}
 	if clientCertValue := c.Argument(7); clientCertValue == nil || sobek.IsUndefined(clientCertValue) {
 		clientConf.clientCert = ""
@@ -206,19 +205,19 @@ func (c *client) Connect() error {
 
 	var tlsConfig *tls.Config
 	// Use root CA if specified
-	if len(c.conf.caRootPath) > 0 {
-		mqttTLSCA, err := os.ReadFile(c.conf.caRootPath)
-		if err != nil {
-			panic(err)
-		}
+	if len(c.conf.caRoot) > 0 {
+		//	mqttTLSCA, err := os.ReadFile(c.conf.caRootPath)
+		//	if err != nil {
+		//		panic(err)
+		//	}
 		rootCA := x509.NewCertPool()
-		loadCA := rootCA.AppendCertsFromPEM(mqttTLSCA)
+		loadCA := rootCA.AppendCertsFromPEM([]byte(c.conf.caRoot))
 		if !loadCA {
 			panic("failed to parse root certificate")
 		}
 		tlsConfig = &tls.Config{
 			RootCAs:    rootCA,
-			MinVersion: tls.VersionTLS13,
+			MinVersion: tls.VersionTLS12,
 		}
 	}
 	// Use local cert if specified
@@ -254,6 +253,7 @@ func (c *client) Connect() error {
 	opts.SetUsername(c.conf.user)
 	opts.SetPassword(c.conf.password)
 	opts.SetCleanSession(c.conf.cleansess)
+	opts.SetProtocolVersion(4)
 	client := paho.NewClient(opts)
 	token := client.Connect()
 	rt := c.vu.Runtime()
