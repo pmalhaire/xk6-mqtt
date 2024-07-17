@@ -1,5 +1,7 @@
 # xk6-mqtt
 
+The main branch is not stable, do not use it. eesha/cleanup_branch works, branch off of it and then merge your PR into it. The releases and tags should be made off this branch.
+
 This is a [k6](https://go.k6.io/k6) extension using the [xk6](https://github.com/grafana/xk6) system.
 
 | :exclamation: This is a proof of concept, isn't supported by the k6 team, and may break in the future. USE AT YOUR OWN RISK! |
