@@ -54,6 +54,8 @@ type conf struct {
 	clientCertKeyPath string
 	// wether to skip the cert validity check
 	skipTLSValidation bool
+	// configure tls min version
+	tlsMinVersion uint16
 }
 
 const (
@@ -97,6 +99,22 @@ func getLabels(labelsArg sobek.Value, rt *sobek.Runtime) mqttMetricsLabels {
 	}
 
 	return labels
+}
+
+func tlsVersionStringToNumber(version string) (uint16, error) {
+	versionMap := map[string]uint16{
+		"SSLv3":   tls.VersionSSL30,
+		"TLS 1.0": tls.VersionTLS10,
+		"TLS 1.1": tls.VersionTLS11,
+		"TLS 1.2": tls.VersionTLS12,
+		"TLS 1.3": tls.VersionTLS13,
+	}
+
+	if versionNumber, ok := versionMap[version]; ok {
+		return versionNumber, nil
+	}
+
+	return 0, errors.New("unknown TLS version")
 }
 
 //nolint:nosnakecase // their choice not mine
@@ -168,6 +186,17 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	skipTLS := c.Argument(10)
 	clientConf.skipTLSValidation = skipTLS.ToBoolean()
 
+	if tlsMinVersionValue := c.Argument(11); tlsMinVersionValue == nil || sobek.IsUndefined(tlsMinVersionValue) {
+		clientConf.tlsMinVersion = tls.VersionTLS13
+	} else {
+		tlsMinVersion, err := tlsVersionStringToNumber(tlsMinVersionValue.String())
+		if err != nil {
+			common.Throw(m.vu.Runtime(), err)
+		} else {
+			clientConf.tlsMinVersion = tlsMinVersion
+		}
+	}
+
 	client := &client{
 		vu:      m.vu,
 		metrics: &metrics,
@@ -218,7 +247,7 @@ func (c *client) Connect() error {
 		}
 		tlsConfig = &tls.Config{
 			RootCAs:    rootCA,
-			MinVersion: tls.VersionTLS13,
+			MinVersion: c.conf.tlsMinVersion,
 		}
 	}
 	// Use local cert if specified
@@ -232,7 +261,7 @@ func (c *client) Connect() error {
 		} else {
 			tlsConfig = &tls.Config{
 				Certificates: []tls.Certificate{cert},
-				MinVersion:   tls.VersionTLS13,
+				MinVersion:   c.conf.tlsMinVersion,
 			}
 		}
 	}
