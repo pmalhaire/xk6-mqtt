@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
@@ -46,12 +47,12 @@ type conf struct {
 	clientid string
 	// timeout ms
 	timeout uint
-	// path to caRoot path
-	caRootPath string
-	// path to client cert file
-	clientCertPath string
-	// path to client cert key file
-	clientCertKeyPath string
+	// caRoot PEM string or path
+	caRoot string
+	// client cert PEM string or path
+	clientCert string
+	// client cert PEM string or path
+	clientCertKey string
 	// wether to skip the cert validity check
 	skipTLSValidation bool
 }
@@ -120,7 +121,7 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	}
 	clientConf.user = userValue.String()
 	passwordValue := c.Argument(2)
-	if userValue == nil || sobek.IsUndefined(passwordValue) {
+	if passwordValue == nil || sobek.IsUndefined(passwordValue) {
 		common.Throw(rt, errors.New("Client requires a password value"))
 	}
 	clientConf.password = passwordValue.String()
@@ -143,21 +144,21 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	clientConf.timeout = uint(timeoutValue.ToInteger())
 
 	// optional args
-	if caRootPathValue := c.Argument(6); caRootPathValue == nil || sobek.IsUndefined(caRootPathValue) {
-		clientConf.caRootPath = ""
+	if caRootValue := c.Argument(6); caRootValue == nil || sobek.IsUndefined(caRootValue) {
+		clientConf.caRoot = ""
 	} else {
-		clientConf.caRootPath = caRootPathValue.String()
+		clientConf.caRoot = caRootValue.String()
 	}
-	if clientCertPathValue := c.Argument(7); clientCertPathValue == nil || sobek.IsUndefined(clientCertPathValue) {
-		clientConf.clientCertPath = ""
+	if clientCertValue := c.Argument(7); clientCertValue == nil || sobek.IsUndefined(clientCertValue) {
+		clientConf.clientCert = ""
 	} else {
-		clientConf.clientCertPath = clientCertPathValue.String()
+		clientConf.clientCert = clientCertValue.String()
 	}
-	if clientCertKeyPathValue := c.Argument(8); clientCertKeyPathValue == nil ||
-		sobek.IsUndefined(clientCertKeyPathValue) {
-		clientConf.clientCertKeyPath = ""
+	if clientCertKeyValue := c.Argument(8); clientCertKeyValue == nil ||
+		sobek.IsUndefined(clientCertKeyValue) {
+		clientConf.clientCertKey = ""
 	} else {
-		clientConf.clientCertKeyPath = clientCertKeyPathValue.String()
+		clientConf.clientCertKey = clientCertKeyValue.String()
 	}
 	labels := getLabels(c.Argument(9), rt)
 	metrics, err := registerMetrics(m.vu, labels)
@@ -206,13 +207,21 @@ func (c *client) Connect() error {
 
 	var tlsConfig *tls.Config
 	// Use root CA if specified
-	if len(c.conf.caRootPath) > 0 {
-		mqttTLSCA, err := os.ReadFile(c.conf.caRootPath)
-		if err != nil {
-			panic(err)
+	if len(c.conf.caRoot) > 0 {
+		var caContent []byte
+		if strings.HasPrefix(c.conf.caRoot, "-----BEGIN CERTIFICATE-----") {
+			// PEM content
+			caContent = []byte(c.conf.caRoot)
+		} else {
+			// probably path to pem file
+			var err error
+			caContent, err = os.ReadFile(c.conf.caRoot)
+			if err != nil {
+				panic(err)
+			}
 		}
 		rootCA := x509.NewCertPool()
-		loadCA := rootCA.AppendCertsFromPEM(mqttTLSCA)
+		loadCA := rootCA.AppendCertsFromPEM(caContent)
 		if !loadCA {
 			panic("failed to parse root certificate")
 		}
@@ -222,8 +231,16 @@ func (c *client) Connect() error {
 		}
 	}
 	// Use local cert if specified
-	if len(c.conf.clientCertPath) > 0 {
-		cert, err := tls.LoadX509KeyPair(c.conf.clientCertPath, c.conf.clientCertKeyPath)
+	if len(c.conf.clientCert) > 0 {
+		var cert tls.Certificate
+		var err error
+		if strings.HasPrefix(c.conf.clientCert, "-----BEGIN CERTIFICATE-----") && strings.HasPrefix(c.conf.clientCertKey, "-----BEGIN RSA PRIVATE KEY-----") {
+			// PEM content
+			cert, err = tls.X509KeyPair([]byte(c.conf.clientCert), []byte(c.conf.clientCertKey))
+		} else {
+			// probably paths to pem files
+			cert, err = tls.LoadX509KeyPair(c.conf.clientCert, c.conf.clientCertKey)
+		}
 		if err != nil {
 			panic("failed to parse client certificate")
 		}
