@@ -103,7 +103,6 @@ func getLabels(labelsArg sobek.Value, rt *sobek.Runtime) mqttMetricsLabels {
 
 func tlsVersionStringToNumber(version string) (uint16, error) {
 	versionMap := map[string]uint16{
-		"SSLv3":   tls.VersionSSL30,
 		"TLS 1.0": tls.VersionTLS10,
 		"TLS 1.1": tls.VersionTLS11,
 		"TLS 1.2": tls.VersionTLS12,
@@ -247,7 +246,7 @@ func (c *client) Connect() error {
 		}
 		tlsConfig = &tls.Config{
 			RootCAs:    rootCA,
-			MinVersion: c.conf.tlsMinVersion,
+			MinVersion: c.conf.tlsMinVersion, // #nosec G402
 		}
 	}
 	// Use local cert if specified
@@ -261,7 +260,7 @@ func (c *client) Connect() error {
 		} else {
 			tlsConfig = &tls.Config{
 				Certificates: []tls.Certificate{cert},
-				MinVersion:   c.conf.tlsMinVersion,
+				MinVersion:   c.conf.tlsMinVersion, // #nosec G402
 			}
 		}
 	}
