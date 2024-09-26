@@ -13,6 +13,8 @@ var (
 	ErrClient = errors.New("client is not connected")
 	// ErrTimeout operation timeout
 	ErrTimeout = errors.New("operation timeout")
+	// ErrTimeoutToLong timeout value is too large
+	ErrTimeoutToLong = errors.New("timeout value is too large")
 	// ErrSubscribe failed to subscribe to mqtt topic
 	ErrSubscribe = errors.New("subscribe failure")
 	// ErrConsumeToken consume token is invalid

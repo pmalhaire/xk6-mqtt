@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"time"
 
@@ -157,7 +158,11 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	if timeoutValue == nil || sobek.IsUndefined(timeoutValue) {
 		common.Throw(rt, errors.New("Client requires a timeout value"))
 	}
-	clientConf.timeout = uint(timeoutValue.ToInteger())
+	timeoutIntValue := timeoutValue.ToInteger()
+	if timeoutIntValue < 0 {
+		common.Throw(rt, errors.New("negative timeout value is not allowed"))
+	}
+	clientConf.timeout = uint(timeoutIntValue)
 
 	// optional args
 	if caRootPathValue := c.Argument(6); caRootPathValue == nil || sobek.IsUndefined(caRootPathValue) {
@@ -202,6 +207,14 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 		conf:    clientConf,
 		obj:     rt.NewObject(),
 	}
+
+	m.defineRuntimeMethods(client)
+
+	return client.obj
+}
+
+func (m *MqttAPI) defineRuntimeMethods(client *client) {
+	rt := m.vu.Runtime()
 	must := func(err error) {
 		if err != nil {
 			common.Throw(rt, err)
@@ -224,13 +237,17 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 
 	must(client.obj.DefineDataProperty(
 		"close", rt.ToValue(client.Close), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
-
-	return client.obj
 }
 
 // Connect create a connection to mqtt
 func (c *client) Connect() error {
 	opts := paho.NewClientOptions()
+
+	// check timeout value
+	timeoutValue, err := safeUintToInt64(c.conf.timeout)
+	if err != nil {
+		panic("timeout value is too large")
+	}
 
 	var tlsConfig *tls.Config
 	// Use root CA if specified
@@ -285,7 +302,7 @@ func (c *client) Connect() error {
 	client := paho.NewClient(opts)
 	token := client.Connect()
 	rt := c.vu.Runtime()
-	if !token.WaitTimeout(time.Duration(c.conf.timeout) * time.Millisecond) {
+	if !token.WaitTimeout(time.Duration(timeoutValue) * time.Millisecond) {
 		common.Throw(rt, ErrTimeout)
 		return ErrTimeout
 	}
@@ -333,4 +350,11 @@ func (c *client) newErrorEvent(msg string) *sobek.Object {
 	must(o.DefineDataProperty("type", rt.ToValue("error"), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	must(o.DefineDataProperty("message", rt.ToValue(msg), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	return o
+}
+
+func safeUintToInt64(u uint) (int64, error) {
+	if u > math.MaxInt64 {
+		return 0, errors.New("value too large to convert to int64")
+	}
+	return int64(u), nil
 }

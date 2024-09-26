@@ -25,6 +25,14 @@ func (c *client) Subscribe(
 		common.Throw(rt, ErrClient)
 		return ErrClient
 	}
+
+	// check timeout value
+	timeoutValue, err := safeUintToInt64(timeout)
+	if err != nil {
+		common.Throw(rt, ErrTimeoutToLong)
+		return ErrTimeoutToLong
+	}
+
 	c.messageChan = make(chan paho.Message)
 	messageCB := func(_ paho.Client, msg paho.Message) {
 		go func(msg paho.Message) {
@@ -32,7 +40,7 @@ func (c *client) Subscribe(
 		}(msg)
 	}
 	token := c.pahoClient.Subscribe(topic, byte(qos), messageCB)
-	if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
+	if !token.WaitTimeout(time.Duration(timeoutValue) * time.Millisecond) {
 		common.Throw(rt, ErrTimeout)
 		return ErrTimeout
 	}
@@ -47,7 +55,7 @@ func (c *client) Subscribe(
 		}
 	}
 	c.tq = taskqueue.New(registerCallback)
-	go c.loop(c.messageChan, timeout)
+	go c.loop(c.messageChan, timeoutValue)
 	return nil
 }
 
@@ -77,7 +85,7 @@ func (c *client) receiveMessageMetric(msgLen float64) error {
 }
 
 //nolint:gocognit // todo improve this
-func (c *client) loop(messageChan <-chan paho.Message, timeout uint) {
+func (c *client) loop(messageChan <-chan paho.Message, timeout int64) {
 	ctx := c.vu.Context()
 	stop := make(chan struct{})
 	defer c.tq.Close()
