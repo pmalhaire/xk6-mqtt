@@ -24,6 +24,15 @@ func (c *client) Publish(
 	if success == nil && failure == nil {
 		return c.publishSync(topic, qos, message, retain, timeout)
 	}
+
+	// check timeout value
+	timeoutValue, err := safeUintToInt64(timeout)
+	if err != nil {
+		rt := c.vu.Runtime()
+		common.Throw(rt, ErrTimeoutToLong)
+		return ErrTimeoutToLong
+	}
+
 	// async case
 	callback := c.vu.RegisterCallback()
 	go func() {
@@ -40,7 +49,7 @@ func (c *client) Publish(
 			return
 		}
 		token := c.pahoClient.Publish(topic, byte(qos), retain, message)
-		if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
+		if !token.WaitTimeout(time.Duration(timeoutValue) * time.Millisecond) {
 			callback(func() error {
 				ev := c.newErrorEvent("publish timeout")
 
@@ -94,19 +103,30 @@ func (c *client) publishSync(
 		common.Throw(rt, ErrClient)
 		return ErrClient
 	}
+
+	// check timeout value
+	timeoutValue, err := safeUintToInt64(timeout)
+	if err != nil {
+		rt := c.vu.Runtime()
+		common.Throw(rt, ErrTimeoutToLong)
+		return ErrTimeoutToLong
+	}
+
 	token := c.pahoClient.Publish(topic, byte(qos), retain, message)
 	// sync case
-	if !token.WaitTimeout(time.Duration(timeout) * time.Millisecond) {
+	if !token.WaitTimeout(time.Duration(timeoutValue) * time.Millisecond) {
 		rt := c.vu.Runtime()
 		common.Throw(rt, ErrTimeout)
 		return ErrTimeout
 	}
-	if err := token.Error(); err != nil {
+
+	if err = token.Error(); err != nil {
 		rt := c.vu.Runtime()
 		common.Throw(rt, ErrPublish)
 		return ErrPublish
 	}
-	err := c.publishMessageMetric(float64(len(message)))
+
+	err = c.publishMessageMetric(float64(len(message)))
 	if err != nil {
 		return err
 	}
