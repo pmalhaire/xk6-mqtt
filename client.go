@@ -231,6 +231,8 @@ func (m *MqttAPI) defineRuntimeMethods(client *client) {
 	must(client.obj.DefineDataProperty(
 		"isConnected", rt.ToValue(client.IsConnected), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
+		"isConnectionOpen", rt.ToValue(client.IsConnectionOpen), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
+	must(client.obj.DefineDataProperty(
 		"publish", rt.ToValue(client.Publish), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
 		"subscribe", rt.ToValue(client.Subscribe), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
@@ -333,6 +335,15 @@ func (c *client) IsConnected() bool {
 		return false
 	}
 	return true
+}
+
+// IsConnectionOpen for the given client
+// Checks client has an active connection to broker i.e not in disconnected or reconnect mode
+func (c *client) IsConnectionOpen() bool {
+	if c.pahoClient == nil {
+		return false
+	}
+	return c.pahoClient.IsConnectionOpen()
 }
 
 // error event for async
