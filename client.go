@@ -329,7 +329,7 @@ func (c *client) Close() {
 
 // IsConnected the given client
 func (c *client) IsConnected() bool {
-	if c.pahoClient == nil || !c.pahoClient.IsConnected() {
+	if c.pahoClient == nil || !c.pahoClient.IsConnectionOpen() {
 		return false
 	}
 	return true
