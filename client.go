@@ -233,6 +233,10 @@ func (m *MqttAPI) defineRuntimeMethods(client *client) {
 	must(client.obj.DefineDataProperty(
 		"publish", rt.ToValue(client.Publish), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
+		"publishAsyncForDuration", rt.ToValue(client.PublishAsyncForDuration), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
+	must(client.obj.DefineDataProperty(
+		"publishSyncForDuration", rt.ToValue(client.PublishSyncForDuration), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
+	must(client.obj.DefineDataProperty(
 		"subscribe", rt.ToValue(client.Subscribe), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 
 	must(client.obj.DefineDataProperty(
