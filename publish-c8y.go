@@ -88,7 +88,7 @@ func (c *client) PublishSyncForDuration(
 //   - durationMillis: total duration in milliseconds to keep publishing.
 //   - intervalMillis: interval in milliseconds between each publish attempt.
 //   - maxCount: maximum number times to invoke publishFunc. If set to -1, publishFunc is invoked until the duration elapses.
-//   - function: Function to invoke.
+//   - funcToInvoke: Function to invoke.
 //
 // Returns:
 //   - The number of successful invocations.
@@ -96,7 +96,7 @@ func (c *client) PublishSyncForDuration(
 func (c *client) invokeForDuration(
 	durationMillis, intervalMillis int64,
 	maxCount int64,
-	function func() error,
+	funcToInvoke func() error,
 ) (int64, error) {
 	var successCount int64
 	var interval time.Duration
@@ -106,7 +106,7 @@ func (c *client) invokeForDuration(
 	deadline := time.Now().Add(time.Duration(durationMillis) * time.Millisecond)
 
 	for time.Now().Before(deadline) && (maxCount == UnlimitedMessageCount || successCount < maxCount) {
-		err := function()
+		err := funcToInvoke()
 		if err == nil {
 			successCount++
 		} else {
