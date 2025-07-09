@@ -13,7 +13,6 @@ const UnlimitedMessageCount int64 = -1
 //
 // Parameters:
 //   - durationMillis: total duration in milliseconds to keep publishing.
-//   - intervalMillis: interval in milliseconds between each publish attempt.
 //   - maxMessageCount: maximum number of messages to publish. If set to -1, publishing continues until the duration elapses.
 //   - topic: the MQTT topic to publish to.
 //   - qos: Quality of Service level for the publish.
@@ -24,15 +23,14 @@ const UnlimitedMessageCount int64 = -1
 //   - The number of successful publish operations.
 //     If maxMessageCount is -1, messages will be published until the duration elapses, ignoring the message count limit.
 func (c *client) PublishAsyncForDuration(
-	durationMillis, intervalMillis int64,
-	maxMessageCount int64,
+	durationMillis, maxMessageCount int64,
 	topic string,
 	qos int,
 	message string,
 	retain bool,
 	timeout uint,
 ) (int64, error) {
-	return c.invokeForDuration(durationMillis, intervalMillis, maxMessageCount, func() error {
+	return c.invokeForDuration(durationMillis, maxMessageCount, func() error {
 		return c.Publish(
 			topic,
 			qos,
@@ -50,7 +48,6 @@ func (c *client) PublishAsyncForDuration(
 //
 // Parameters:
 //   - durationMillis: total duration in milliseconds to keep publishing.
-//   - intervalMillis: interval in milliseconds between each publish attempt.
 //   - maxMessageCount: maximum number of messages to publish.
 //   - topic: the MQTT topic to publish to.
 //   - qos: Quality of Service level for the publish.
@@ -62,15 +59,14 @@ func (c *client) PublishAsyncForDuration(
 //   - The number of successful publish operations.
 //     If maxMessageCount is -1, messages will be published until the duration elapses, ignoring the message count limit.
 func (c *client) PublishSyncForDuration(
-	durationMillis, intervalMillis int64,
-	maxMessageCount int64,
+	durationMillis, maxMessageCount int64,
 	topic string,
 	qos int,
 	message string,
 	retain bool,
 	timeout uint,
 ) (int64, error) {
-	return c.invokeForDuration(durationMillis, intervalMillis, maxMessageCount, func() error {
+	return c.invokeForDuration(durationMillis, maxMessageCount, func() error {
 		return c.publishSync(
 			topic,
 			qos,
@@ -86,7 +82,6 @@ func (c *client) PublishSyncForDuration(
 //
 // Parameters:
 //   - durationMillis: total duration in milliseconds to keep publishing.
-//   - intervalMillis: interval in milliseconds between each publish attempt.
 //   - maxCount: maximum number times to invoke publishFunc. If set to -1, publishFunc is invoked until the duration elapses.
 //   - funcToInvoke: Function to invoke.
 //
@@ -94,35 +89,27 @@ func (c *client) PublishSyncForDuration(
 //   - The number of successful invocations.
 //     If maxCount is -1, publishFunc is invoked until the duration elapses, ignoring the count limit.
 func (c *client) invokeForDuration(
-	durationMillis, intervalMillis int64,
-	maxCount int64,
+	durationMillis, maxCount int64,
 	funcToInvoke func() error,
 ) (int64, error) {
-	var successCount int64
-	var interval time.Duration
-	if intervalMillis > 0 {
-		interval = time.Duration(intervalMillis) * time.Millisecond
-	}
+	var count int64
 	deadline := time.Now().Add(time.Duration(durationMillis) * time.Millisecond)
 
-	for time.Now().Before(deadline) && (maxCount == UnlimitedMessageCount || successCount < maxCount) {
+	for time.Now().Before(deadline) && (maxCount == UnlimitedMessageCount || count < maxCount) {
 		err := funcToInvoke()
 		if err == nil {
-			successCount++
+			count++
 		} else {
-			return successCount, err
-		}
-		if intervalMillis > 0 {
-			time.Sleep(interval)
+			return count, err
 		}
 	}
 
-	if successCount == maxCount && time.Now().Before(deadline) {
+	if count == maxCount && time.Now().Before(deadline) {
 		remaining := deadline.Sub(time.Now())
 		if remaining > 0 {
 			time.Sleep(remaining)
 		}
 	}
 
-	return successCount, nil
+	return count, nil
 }
