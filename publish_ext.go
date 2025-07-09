@@ -1,6 +1,7 @@
 package mqtt
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/grafana/sobek"
@@ -37,8 +38,14 @@ func (c *client) PublishAsyncForDuration(
 			message,
 			retain,
 			timeout,
-			func(sobek.Value) (sobek.Value, error) { return nil, nil },
-			func(sobek.Value) (sobek.Value, error) { return nil, nil },
+			func(value sobek.Value) (sobek.Value, error) {
+				// success: just return the value or log it
+				return value, nil
+			},
+			func(value sobek.Value) (sobek.Value, error) {
+				// failure: return an error for tracking
+				return nil, fmt.Errorf("publish failed: %v", value)
+			},
 		)
 	})
 }
