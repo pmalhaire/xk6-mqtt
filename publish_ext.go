@@ -113,7 +113,6 @@ func (c *client) invokeForDuration(
 
 	if count == maxCount && time.Now().Before(deadline) {
 		remaining := deadline.Sub(time.Now())
-		fmt.Println("REMAINING=", remaining, "VU=", c.vu)
 		if remaining > 0 {
 			time.Sleep(remaining)
 		}
