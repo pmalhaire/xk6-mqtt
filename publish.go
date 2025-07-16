@@ -155,6 +155,11 @@ func (c *client) publishMessageMetric(msgLen float64) error {
 		Time:       now,
 		Value:      msgLen,
 	})
+	metrics.PushIfNotDone(ctx, state.Samples, metrics.Sample{
+		TimeSeries: metrics.TimeSeries{Metric: c.metrics.SentDates, Tags: c.metrics.TagsAndMeta.Tags},
+		Time:       now,
+		Value:      float64(now.UnixMilli()),
+	})
 	return nil
 }
 

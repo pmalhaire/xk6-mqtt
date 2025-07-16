@@ -12,6 +12,7 @@ type mqttMetrics struct {
 	ReceivedBytes    *metrics.Metric
 	SentMessages     *metrics.Metric
 	ReceivedMessages *metrics.Metric
+	SentDates        *metrics.Metric
 	TagsAndMeta      *metrics.TagsAndMeta
 }
 
@@ -20,6 +21,7 @@ type mqttMetricsLabels struct {
 	ReceivedBytesLabel         string
 	SentMessagesCountLabel     string
 	ReceivedMessagesCountLabel string
+	SentDatesLabel             string
 }
 
 // registerMetrics registers the metrics for the mqtt module in the metrics registry
@@ -51,6 +53,10 @@ func registerMetrics(vu modules.VU, labels mqttMetricsLabels) (mqttMetrics, erro
 	}
 
 	m.ReceivedMessages, err = registry.NewMetric(labels.ReceivedMessagesCountLabel, metrics.Counter)
+	if err != nil {
+		return m, err
+	}
+	m.SentDates, err = registry.NewMetric(labels.SentDatesLabel, metrics.Gauge)
 	if err != nil {
 		return m, err
 	}
