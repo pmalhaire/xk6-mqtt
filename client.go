@@ -138,7 +138,7 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	}
 	clientConf.user = userValue.String()
 	passwordValue := c.Argument(2)
-	if userValue == nil || sobek.IsUndefined(passwordValue) {
+	if passwordValue == nil || sobek.IsUndefined(passwordValue) {
 		common.Throw(rt, errors.New("Client requires a password value"))
 	}
 	clientConf.password = passwordValue.String()
