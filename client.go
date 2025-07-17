@@ -134,7 +134,7 @@ func tlsVersionStringToNumber(version string) (uint16, error) {
 func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	serversArray := c.Argument(0)
 	rt := m.vu.Runtime()
-	if serversArray == nil || sobek.IsUndefined(serversArray) {
+	if isNilOrUndefined(serversArray) {
 		common.Throw(rt, errors.New("Client requires a server list"))
 	}
 	var servers []string
@@ -146,29 +146,29 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	}
 	clientConf.servers = servers
 	userValue := c.Argument(1)
-	if userValue == nil || sobek.IsUndefined(userValue) {
+	if isNilOrUndefined(userValue) {
 		common.Throw(rt, errors.New("Client requires a user value"))
 	}
 	clientConf.user = userValue.String()
 	passwordValue := c.Argument(2)
-	if passwordValue == nil || sobek.IsUndefined(passwordValue) {
+	if isNilOrUndefined(passwordValue) {
 		common.Throw(rt, errors.New("Client requires a password value"))
 	}
 	clientConf.password = passwordValue.String()
 	cleansessValue := c.Argument(3)
-	if cleansessValue == nil || sobek.IsUndefined(cleansessValue) {
+	if isNilOrUndefined(cleansessValue) {
 		common.Throw(rt, errors.New("Client requires a cleansess value"))
 	}
 	clientConf.cleansess = cleansessValue.ToBoolean()
 
 	clientIDValue := c.Argument(4)
-	if clientIDValue == nil || sobek.IsUndefined(clientIDValue) {
+	if isNilOrUndefined(clientIDValue) {
 		common.Throw(rt, errors.New("Client requires a clientID value"))
 	}
 	clientConf.clientid = clientIDValue.String()
 
 	timeoutValue := c.Argument(5)
-	if timeoutValue == nil || sobek.IsUndefined(timeoutValue) {
+	if isNilOrUndefined(timeoutValue) {
 		common.Throw(rt, errors.New("Client requires a timeout value"))
 	}
 	timeoutIntValue := timeoutValue.ToInteger()
@@ -178,18 +178,17 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	clientConf.timeout = uint(timeoutIntValue)
 
 	// optional args
-	if caRootPathValue := c.Argument(6); caRootPathValue == nil || sobek.IsUndefined(caRootPathValue) {
+	if caRootPathValue := c.Argument(6); isNilOrUndefined(caRootPathValue) {
 		clientConf.caRootPath = ""
 	} else {
 		clientConf.caRootPath = caRootPathValue.String()
 	}
-	if clientCertPathValue := c.Argument(7); clientCertPathValue == nil || sobek.IsUndefined(clientCertPathValue) {
+	if clientCertPathValue := c.Argument(7); isNilOrUndefined(clientCertPathValue) {
 		clientConf.clientCertPath = ""
 	} else {
 		clientConf.clientCertPath = clientCertPathValue.String()
 	}
-	if clientCertKeyPathValue := c.Argument(8); clientCertKeyPathValue == nil ||
-		sobek.IsUndefined(clientCertKeyPathValue) {
+	if clientCertKeyPathValue := c.Argument(8); isNilOrUndefined(clientCertKeyPathValue) {
 		clientConf.clientCertKeyPath = ""
 	} else {
 		clientConf.clientCertKeyPath = clientCertKeyPathValue.String()
@@ -203,7 +202,7 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	skipTLS := c.Argument(10)
 	clientConf.skipTLSValidation = skipTLS.ToBoolean()
 
-	if tlsMinVersionValue := c.Argument(11); tlsMinVersionValue == nil || sobek.IsUndefined(tlsMinVersionValue) {
+	if tlsMinVersionValue := c.Argument(11); isNilOrUndefined(tlsMinVersionValue) {
 		clientConf.tlsMinVersion = tls.VersionTLS13
 	} else {
 		tlsMinVersion, err := tlsVersionStringToNumber(tlsMinVersionValue.String())
@@ -224,6 +223,14 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	m.defineRuntimeMethods(client)
 
 	return client.obj
+}
+
+func isNilOrUndefined(v sobek.Value) bool {
+	if v == nil || v.Export() == nil || sobek.IsUndefined(v) {
+		return true
+	}
+
+	return false
 }
 
 func (m *MqttAPI) defineRuntimeMethods(client *client) {
