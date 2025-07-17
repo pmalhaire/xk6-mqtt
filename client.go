@@ -64,7 +64,8 @@ const (
 	receivedBytesLabel         = "mqtt_received_bytes"
 	sentMessagesCountLabel     = "mqtt_sent_messages_count"
 	receivedMessagesCountLabel = "mqtt_received_messages_count"
-	sentDatesLabel              = "mqtt_sent_messages_dates"
+	sentDatesLabel             = "mqtt_sent_messages_dates"
+	receivedDatesLabel         = "mqtt_received_messages_dates"
 )
 
 func getLabels(labelsArg sobek.Value, rt *sobek.Runtime) mqttMetricsLabels {
@@ -77,6 +78,8 @@ func getLabels(labelsArg sobek.Value, rt *sobek.Runtime) mqttMetricsLabels {
 		labels.SentMessagesCountLabel = sentMessagesCountLabel
 		labels.ReceivedMessagesCountLabel = receivedMessagesCountLabel
 		labels.SentDatesLabel = sentDatesLabel
+		labels.ReceivedDatesLabel = receivedDatesLabel
+
 		return labels
 	}
 
