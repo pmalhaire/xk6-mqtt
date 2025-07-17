@@ -107,6 +107,10 @@ func getLabels(labelsArg sobek.Value, rt *sobek.Runtime) mqttMetricsLabels {
 	if !ok {
 		common.Throw(rt, fmt.Errorf("invalid metricsLabels sentDatesLabel %#v", metricsLabels.Export()))
 	}
+	labels.ReceivedDatesLabel, ok = labelsJS["receivedDatesLabel"].(string)
+	if !ok {
+		common.Throw(rt, fmt.Errorf("invalid metricsLabels receivedDatesLabel %#v", metricsLabels.Export()))
+	}
 
 	return labels
 }
