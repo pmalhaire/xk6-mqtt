@@ -64,6 +64,8 @@ const (
 	receivedBytesLabel         = "mqtt_received_bytes"
 	sentMessagesCountLabel     = "mqtt_sent_messages_count"
 	receivedMessagesCountLabel = "mqtt_received_messages_count"
+	sentDatesLabel             = "mqtt_sent_messages_dates"
+	receivedDatesLabel         = "mqtt_received_messages_dates"
 )
 
 func getLabels(labelsArg sobek.Value, rt *sobek.Runtime) mqttMetricsLabels {
@@ -75,6 +77,9 @@ func getLabels(labelsArg sobek.Value, rt *sobek.Runtime) mqttMetricsLabels {
 		labels.ReceivedBytesLabel = receivedBytesLabel
 		labels.SentMessagesCountLabel = sentMessagesCountLabel
 		labels.ReceivedMessagesCountLabel = receivedMessagesCountLabel
+		labels.SentDatesLabel = sentDatesLabel
+		labels.ReceivedDatesLabel = receivedDatesLabel
+
 		return labels
 	}
 
@@ -97,6 +102,14 @@ func getLabels(labelsArg sobek.Value, rt *sobek.Runtime) mqttMetricsLabels {
 	labels.ReceivedMessagesCountLabel, ok = labelsJS["receivedMessagesCountLabel"].(string)
 	if !ok {
 		common.Throw(rt, fmt.Errorf("invalid metricsLabels receivedMessagesCountLabel %#v", metricsLabels.Export()))
+	}
+	labels.SentDatesLabel, ok = labelsJS["sentDatesLabel"].(string)
+	if !ok {
+		common.Throw(rt, fmt.Errorf("invalid metricsLabels sentDatesLabel %#v", metricsLabels.Export()))
+	}
+	labels.ReceivedDatesLabel, ok = labelsJS["receivedDatesLabel"].(string)
+	if !ok {
+		common.Throw(rt, fmt.Errorf("invalid metricsLabels receivedDatesLabel %#v", metricsLabels.Export()))
 	}
 
 	return labels
@@ -138,7 +151,7 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 	}
 	clientConf.user = userValue.String()
 	passwordValue := c.Argument(2)
-	if userValue == nil || sobek.IsUndefined(passwordValue) {
+	if passwordValue == nil || sobek.IsUndefined(passwordValue) {
 		common.Throw(rt, errors.New("Client requires a password value"))
 	}
 	clientConf.password = passwordValue.String()
@@ -232,6 +245,10 @@ func (m *MqttAPI) defineRuntimeMethods(client *client) {
 		"isConnected", rt.ToValue(client.IsConnected), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
 		"publish", rt.ToValue(client.Publish), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
+	must(client.obj.DefineDataProperty(
+		"publishAsyncForDuration", rt.ToValue(client.PublishAsyncForDuration), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
+	must(client.obj.DefineDataProperty(
+		"publishSyncForDuration", rt.ToValue(client.PublishSyncForDuration), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 	must(client.obj.DefineDataProperty(
 		"subscribe", rt.ToValue(client.Subscribe), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE))
 
