@@ -194,7 +194,7 @@ func (m *MqttAPI) client(c sobek.ConstructorCall) *sobek.Object {
 		clientConf.clientCertKeyPath = clientCertKeyPathValue.String()
 	}
 	labels := getLabels(c.Argument(9), rt)
-	metrics, err := registerMetrics(m.vu, labels)
+	metrics, err := registerMetrics(m.initEnvironment, labels)
 	if err != nil {
 		common.Throw(m.vu.Runtime(), err)
 	}

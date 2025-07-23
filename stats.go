@@ -3,7 +3,7 @@ package mqtt
 import (
 	"errors"
 
-	"go.k6.io/k6/js/modules"
+	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/metrics"
 )
 
@@ -27,10 +27,9 @@ type mqttMetricsLabels struct {
 }
 
 // registerMetrics registers the metrics for the mqtt module in the metrics registry
-func registerMetrics(vu modules.VU, labels mqttMetricsLabels) (mqttMetrics, error) {
+func registerMetrics(env *common.InitEnvironment, labels mqttMetricsLabels) (mqttMetrics, error) {
 	var err error
 	m := mqttMetrics{}
-	env := vu.InitEnv()
 	if env == nil {
 		return m, errors.New("missing env")
 	}
