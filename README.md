@@ -12,7 +12,7 @@ The consumer is not meant to be used for testing Mqtt under load.
 
 ## k6 version
 
-This extension is tested with k6 version `v0.49.0` last release is [v0.40.0](https://github.com/pmalhaire/xk6-mqtt/releases/tag/v0.40.0).
+This extension is tested with k6 version `v1.3.0` last release is [v0.40.3](https://github.com/pmalhaire/xk6-mqtt/releases/tag/v0.40.3).
 
 
 ## Build & Run
