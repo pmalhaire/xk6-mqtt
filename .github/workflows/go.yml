@@ -33,13 +33,13 @@ jobs:
       run: docker run -d -v $PWD/docker_conf/mosquitto:/conf --rm --name mosquitto_tls -p 8883:8883 eclipse-mosquitto mosquitto -c /conf/mosquitto-tls.conf
 
     - name: Test tls from source
-      run: xk6 run ./examples/test_ssl.js -i 1
+      run: xk6 run -- -i 1 ./examples/test_ssl.js
 
     - name: Run influx
       run: docker run --rm --name influx -d -p 8086:8086 influxdb:1.8-alpine
 
     - name: Test influx
-      run: K6_OUT=influxdb=localhost:8086 xk6 run --vus 50 --duration 10s examples/test.js
+      run: K6_OUT=influxdb=localhost:8086 xk6 run -- --vus 50 --duration 10s examples/test.js
 
   golangci:
     name: lint
