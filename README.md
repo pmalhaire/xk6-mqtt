@@ -1,4 +1,4 @@
-!/!\! this repo is no longer maintened thank you for your use or this repo.
+!/!\\! this repo is no longer maintened thank you for your use or this repo.
 
 grafana now has native support for mqtt go to
 
