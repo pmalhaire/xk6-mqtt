@@ -1,3 +1,9 @@
+!/!\! this repo is no longer maintened thank you for your use or this repo.
+
+grafana now has native support for mqtt go to
+
+https://github.com/grafana/xk6-mqtt
+
 # xk6-mqtt
 
 This is a [k6](https://go.k6.io/k6) extension using the [xk6](https://github.com/grafana/xk6) system.
